@@ -12,24 +12,23 @@ class LocaleImplementation extends Locale {
   /// Simple private constructor with asserts to check invariants.
   LocaleImplementation._(this.languageCode, this.scriptCode, this.countryCode,
       this.variants, this._extensions) {
-    ArgumentError.notNull(languageCode);
     // Debug-mode asserts to ensure all parameters are normalized and UTS #35
     // compliant.
     assert(
-        _normalizedLanguageRE.hasMatch(languageCode),
+        languageCode != null && _normalizedLanguageRE.hasMatch(languageCode),
         'languageCode must match RegExp/${_normalizedLanguageRE.pattern}/ '
         'but is "$languageCode".');
     assert(
-        scriptCode == null || _normalizedScriptRE.hasMatch(scriptCode!),
+        scriptCode == null || _normalizedScriptRE.hasMatch(scriptCode),
         'scriptCode must match RegExp/${_normalizedScriptRE.pattern}/ '
         'but is "$scriptCode".');
     assert(
-        countryCode == null || _normalizedRegionRE.hasMatch(countryCode!),
+        countryCode == null || _normalizedRegionRE.hasMatch(countryCode),
         'countryCode must match RegExp/${_normalizedRegionRE.pattern}/ '
         'but is "$countryCode".');
     assert(
-        variants is List<String> &&
-            variants.every(_normalizedVariantRE.hasMatch),
+        variants is List &&
+            variants.every((v) => _normalizedVariantRE.hasMatch(v)),
         'each variant must match RegExp/${_normalizedVariantRE.pattern}/ '
         'but variants are "$variants".');
   }
@@ -56,7 +55,8 @@ class LocaleImplementation extends Locale {
   /// [variants], does not imply subtags are valid as per Unicode LDML spec!
   //
   // Must be static to get tree-shaken away in production code.
-  static final _normalizedVariantRE = RegExp(r'^[a-z\d]{5,8}$|^\d[a-z\d]{3}$');
+  static final _normalizedVariantRE =
+      RegExp(r'^[a-z\d]{5,8}$|^\d[a-z\d]{3}$');
 
   /// Simple factory which assumes parameters are syntactically correct.
   ///
@@ -67,10 +67,10 @@ class LocaleImplementation extends Locale {
   /// For public APIs, see [Locale.fromSubtags] and [Locale.parse].
   factory LocaleImplementation.unsafe(
     String languageCode, {
-    String? scriptCode,
-    String? countryCode,
-    Iterable<String>? variants,
-    LocaleExtensions? extensions,
+    String scriptCode,
+    String countryCode,
+    Iterable<String> variants,
+    LocaleExtensions extensions,
   }) {
     variants = (variants != null && variants.isNotEmpty)
         ? List.unmodifiable(variants.toList()..sort())
@@ -84,13 +84,11 @@ class LocaleImplementation extends Locale {
   ///
   /// Throws a [FormatException] if any subtag is syntactically invalid.
   static LocaleImplementation fromSubtags(
-      {required String languageCode, String? scriptCode, String? countryCode}) {
+      {String languageCode, String scriptCode, String countryCode}) {
     return LocaleImplementation._(
         replaceDeprecatedLanguageSubtag(_normalizeLanguageCode(languageCode)),
-        scriptCode == null ? null : _normalizeScriptCode(scriptCode),
-        countryCode == null
-            ? null
-            : replaceDeprecatedRegionSubtag(_normalizeCountryCode(countryCode)),
+        _normalizeScriptCode(scriptCode),
+        replaceDeprecatedRegionSubtag(_normalizeCountryCode(countryCode)),
         const [],
         null);
   }
@@ -111,6 +109,7 @@ class LocaleImplementation extends Locale {
   ///
   /// Throws a [FormatException] if it is syntactically invalid.
   static String _normalizeScriptCode(String scriptCode) {
+    if (scriptCode == null) return null;
     if (!_scriptRegExp.hasMatch(scriptCode)) {
       throw FormatException('Invalid script "$scriptCode"');
     }
@@ -123,6 +122,7 @@ class LocaleImplementation extends Locale {
   ///
   /// Throws a [FormatException] if it is syntactically invalid.
   static String _normalizeCountryCode(String countryCode) {
+    if (countryCode == null) return null;
     if (!_regionRegExp.hasMatch(countryCode)) {
       throw FormatException('Invalid region "$countryCode"');
     }
@@ -145,7 +145,7 @@ class LocaleImplementation extends Locale {
   /// (deprecated tags have been replaced), but not necessarily valid (the
   /// script might not exist) because the list of valid scripts changes with
   /// time.
-  final String? scriptCode;
+  final String scriptCode;
 
   /// The region subtag of the Locale Identifier, null if absent.
   ///
@@ -153,7 +153,7 @@ class LocaleImplementation extends Locale {
   /// (deprecated tags have been replaced), but not necessarily valid (the
   /// region might not exist) because the list of valid regions changes with
   /// time.
-  final String? countryCode;
+  final String countryCode;
 
   /// Iterable of variant subtags, zero-length iterable if variants are absent.
   ///
@@ -165,22 +165,22 @@ class LocaleImplementation extends Locale {
 
   /// Locale extensions, null if the locale has no extensions.
   // TODO(hugovdm): Not yet supported: getters for extensions.
-  final LocaleExtensions? _extensions;
+  final LocaleExtensions _extensions;
 
   /// Cache of the value returned by [toLanguageTag].
-  String? _languageTag;
+  String _languageTag;
 
   /// Returns the canonical Unicode BCP47 Locale Identifier for this locale.
   String toLanguageTag() {
     if (_languageTag == null) {
-      final out = [languageCode];
-      if (scriptCode != null) out.add(scriptCode!);
-      if (countryCode != null) out.add(countryCode!);
+      final List<String> out = [languageCode];
+      if (scriptCode != null) out.add(scriptCode);
+      if (countryCode != null) out.add(countryCode);
       out.addAll(variants);
-      if (_extensions != null) out.addAll(_extensions!.subtags);
+      if (_extensions != null) out.addAll(_extensions.subtags);
       _languageTag = out.join('-');
     }
-    return _languageTag!;
+    return _languageTag;
   }
 }
 

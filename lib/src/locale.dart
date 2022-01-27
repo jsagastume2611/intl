@@ -20,9 +20,7 @@ abstract class Locale {
   ///
   /// Throws a [FormatException] if any subtag is syntactically invalid.
   static Locale fromSubtags(
-          {required String languageCode,
-          String? scriptCode,
-          String? countryCode}) =>
+          {String languageCode, String scriptCode, String countryCode}) =>
       LocaleImplementation.fromSubtags(
           languageCode: languageCode,
           scriptCode: scriptCode,
@@ -36,7 +34,7 @@ abstract class Locale {
   ///
   /// Throws a [FormatException] if [localeIdentifier] is syntactically invalid.
   static Locale parse(String localeIdentifier) {
-    ArgumentError.checkNotNull(localeIdentifier);
+    assert(localeIdentifier != null);
     var parser = LocaleParser(localeIdentifier);
     var locale = parser.toLocale();
     if (locale == null) {
@@ -53,8 +51,8 @@ abstract class Locale {
   /// https://www.unicode.org/reports/tr35/#Unicode_locale_identifier
   ///
   /// Returns `null` if [localeIdentifier] is syntactically invalid.
-  static Locale? tryParse(String localeIdentifier) {
-    ArgumentError.checkNotNull(localeIdentifier);
+  static Locale tryParse(String localeIdentifier) {
+    assert(localeIdentifier != null);
     var parser = LocaleParser(localeIdentifier);
     return parser.toLocale();
   }
@@ -72,7 +70,7 @@ abstract class Locale {
   /// It is syntactically valid and normalized (has correct case), but not
   /// necessarily valid (the script might not exist) because the list of valid
   /// scripts changes with time.
-  String? get scriptCode;
+  String get scriptCode;
 
   /// The region subtag of the Locale Identifier, null if absent.
   ///
@@ -80,7 +78,7 @@ abstract class Locale {
   /// (deprecated tags have been replaced), but not necessarily valid (the
   /// region might not exist) because the list of valid regions changes with
   /// time.
-  String? get countryCode;
+  String get countryCode;
 
   /// Iterable of variant subtags.
   ///
@@ -103,7 +101,7 @@ abstract class Locale {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Locale && toLanguageTag() == other.toLanguageTag();
+    return other is Locale && this.toLanguageTag() == other.toLanguageTag();
   }
 
   @override

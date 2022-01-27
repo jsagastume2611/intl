@@ -7,12 +7,11 @@
 
 library intl_helpers;
 
-import 'global_state.dart' as global_state;
-import 'intl_helpers.dart' as helpers;
+import 'dart:async';
+import 'package:intl/intl.dart';
 
 /// Type for the callback action when a message translation is not found.
-typedef MessageIfAbsent = String Function(
-    String? messageText, List<Object>? args);
+typedef MessageIfAbsent(String message_str, List<Object> args);
 
 /// This is used as a marker for a locale data map that hasn't been initialized,
 /// and will throw an exception on any usage that isn't the fallback
@@ -22,10 +21,8 @@ class UninitializedLocaleData<F> implements MessageLookup {
   final F fallbackData;
   UninitializedLocaleData(this.message, this.fallbackData);
 
-  bool _isFallback(String key) => canonicalizedLocale(key) == 'en_US';
-
-  F operator [](String key) =>
-      _isFallback(key) ? fallbackData : _throwException();
+  operator [](String key) =>
+      (key == 'en_US') ? fallbackData : _throwException();
 
   /// If a message is looked up before any locale initialization, record it,
   /// and throw an exception with that information once the locale is
@@ -40,81 +37,75 @@ class UninitializedLocaleData<F> implements MessageLookup {
   static final bool throwOnFallback = false;
 
   /// The messages that were called before the locale was initialized.
-  final List<String> _badMessages = [];
+  List<String> _badMessages = [];
 
   void _reportErrors() {
-    if (throwOnFallback && _badMessages.isNotEmpty) {
-      throw StateError(
-          'The following messages were called before locale initialization:'
-          ' $_uninitializedMessages');
+    if (throwOnFallback && _badMessages.length > 0) {
+      throw new StateError(
+          "The following messages were called before locale initialization:"
+          " $_uninitializedMessages");
     }
   }
 
   String get _uninitializedMessages =>
-      (_badMessages.toSet().toList()..sort()).join('\n    ');
+      (_badMessages.toSet().toList()..sort()).join("\n    ");
 
-  String? lookupMessage(String? messageText, String? locale, String? name,
-      List<Object>? args, String? meaning,
-      {MessageIfAbsent? ifAbsent}) {
+  String lookupMessage(String message_str, String locale, String name,
+      List<Object> args, String meaning,
+      {MessageIfAbsent ifAbsent}) {
     if (throwOnFallback) {
-      _badMessages.add((name ?? messageText)!);
+      _badMessages.add(name ?? message_str);
     }
-    return messageText;
+    return message_str;
   }
 
   /// Given an initial locale or null, returns the locale that will be used
   /// for messages.
-  String findLocale(String? locale) =>
-      locale ?? global_state.getCurrentLocale();
+  String findLocale(String locale) => locale ?? Intl.getCurrentLocale();
 
   List<String> get keys => _throwException() as List<String>;
 
-  bool containsKey(String key) {
-    if (!_isFallback(key)) {
-      _throwException();
-    }
-    return true;
-  }
+  bool containsKey(String key) => (key == 'en_US') ? true : _throwException();
 
-  F _throwException() {
-    throw LocaleDataException('Locale data has not been initialized'
-        ', call $message.');
+  _throwException() {
+    throw new LocaleDataException("Locale data has not been initialized"
+        ", call $message.");
   }
 
   void addLocale(String localeName, Function findLocale) => _throwException();
 }
 
 abstract class MessageLookup {
-  String? lookupMessage(String? messageText, String? locale, String? name,
-      List<Object>? args, String? meaning,
-      {MessageIfAbsent? ifAbsent});
+  String lookupMessage(String message_str, String locale, String name,
+      List<Object> args, String meaning,
+      {MessageIfAbsent ifAbsent});
   void addLocale(String localeName, Function findLocale);
 }
 
 class LocaleDataException implements Exception {
   final String message;
   LocaleDataException(this.message);
-  String toString() => 'LocaleDataException: $message';
+  toString() => "LocaleDataException: $message";
 }
 
 ///  An abstract superclass for data readers to keep the type system happy.
 abstract class LocaleDataReader {
-  Future<String> read(String locale);
+  Future read(String locale);
 }
 
 /// The internal mechanism for looking up messages. We expect this to be set
 /// by the implementing package so that we're not dependent on its
 /// implementation.
 MessageLookup messageLookup =
-    UninitializedLocaleData('initializeMessages(<locale>)', null);
+    new UninitializedLocaleData('initializeMessages(<locale>)', null);
 
 /// Initialize the message lookup mechanism. This is for internal use only.
 /// User applications should import `message_lookup_by_library.dart` and call
 /// `initializeMessages`
 void initializeInternalMessageLookup(Function lookupFunction) {
-  if (messageLookup is UninitializedLocaleData<dynamic>) {
+  if (messageLookup is UninitializedLocaleData) {
     // This line has to be precisely this way to work around an analyzer crash.
-    (messageLookup as UninitializedLocaleData<dynamic>)._reportErrors();
+    (messageLookup as UninitializedLocaleData)._reportErrors();
     messageLookup = lookupFunction();
   }
 }
@@ -122,63 +113,7 @@ void initializeInternalMessageLookup(Function lookupFunction) {
 /// If a message is a string literal without interpolation, compute
 /// a name based on that and the meaning, if present.
 // NOTE: THIS LOGIC IS DUPLICATED IN intl_translation AND THE TWO MUST MATCH.
-String? computeMessageName(String? name, String? text, String? meaning) {
-  if (name != null && name != '') return name;
-  return meaning == null ? text : '${text}_$meaning';
-}
-
-String canonicalizedLocale(String? aLocale) {
-// Locales of length < 5 are presumably two-letter forms, or else malformed.
-// We return them unmodified and if correct they will be found.
-// Locales longer than 6 might be malformed, but also do occur. Do as
-// little as possible to them, but make the '-' be an '_' if it's there.
-// We treat C as a special case, and assume it wants en_ISO for formatting.
-// TODO(alanknight): en_ISO is probably not quite right for the C/Posix
-// locale for formatting. Consider adding C to the formats database.
-  if (aLocale == null) return global_state.getCurrentLocale();
-  if (aLocale == 'C') return 'en_ISO';
-  if (aLocale.length < 5) return aLocale;
-  if (aLocale[2] != '-' && (aLocale[2] != '_')) return aLocale;
-  var region = aLocale.substring(3);
-// If it's longer than three it's something odd, so don't touch it.
-  if (region.length <= 3) region = region.toUpperCase();
-  return '${aLocale[0]}${aLocale[1]}_$region';
-}
-
-String? verifiedLocale(String? newLocale, bool Function(String) localeExists,
-    String? Function(String)? onFailure) {
-// TODO(alanknight): Previously we kept a single verified locale on the Intl
-// object, but with different verification for different uses, that's more
-// difficult. As a result, we call this more often. Consider keeping
-// verified locales for each purpose if it turns out to be a performance
-// issue.
-  if (newLocale == null) {
-    return verifiedLocale(
-        global_state.getCurrentLocale(), localeExists, onFailure);
-  }
-  if (localeExists(newLocale)) {
-    return newLocale;
-  }
-  for (var each in [
-    helpers.canonicalizedLocale(newLocale),
-    helpers.shortLocale(newLocale),
-    'fallback'
-  ]) {
-    if (localeExists(each)) {
-      return each;
-    }
-  }
-  return (onFailure ?? _throwLocaleError)(newLocale);
-}
-
-/// The default action if a locale isn't found in verifiedLocale. Throw
-/// an exception indicating the locale isn't correct.
-String _throwLocaleError(String localeName) {
-  throw ArgumentError('Invalid locale "$localeName"');
-}
-
-/// Return the short version of a locale name, e.g. 'en_US' => 'en'
-String shortLocale(String aLocale) {
-  if (aLocale.length < 2) return aLocale;
-  return aLocale.substring(0, 2).toLowerCase();
+String computeMessageName(String name, String text, String meaning) {
+  if (name != null && name != "") return name;
+  return meaning == null ? text : "${text}_${meaning}";
 }

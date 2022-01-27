@@ -7,9 +7,9 @@
 
 library file_data_reader;
 
-import 'dart:io';
-
+import 'dart:async';
 import 'package:path/path.dart';
+import 'dart:io';
 import 'intl_helpers.dart';
 
 class FileDataReader implements LocaleDataReader {
@@ -19,8 +19,8 @@ class FileDataReader implements LocaleDataReader {
   FileDataReader(this.path);
 
   /// Read the locale data found for [locale] on our [path].
-  Future<String> read(String locale) {
-    var file = File(join(path, '$locale.json'));
+  Future read(String locale) {
+    var file = new File(join(path, '$locale.json'));
     return file.readAsString();
   }
 }

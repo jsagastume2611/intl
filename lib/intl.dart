@@ -6,24 +6,38 @@
 /// message formatting and replacement, date and number formatting and parsing,
 /// and utilities for working with Bidirectional text.
 ///
+/// This is part of the [intl package]
+/// (https://pub.dartlang.org/packages/intl).
+///
 /// For things that require locale or other data, there are multiple different
 /// ways of making that data available, which may require importing different
 /// libraries. See the class comments for more details.
+///
+/// There is also a simple example application that can be found in the
+/// [example/basic](https://github.com/dart-lang/intl/tree/master/example/basic)
+/// directory.
 library intl;
 
 import 'dart:async';
+import 'dart:collection';
+import 'dart:convert';
+import 'dart:math';
 
-import 'src/global_state.dart' as global_state;
-import 'src/intl/date_format.dart' show DateFormat;
-import 'src/intl_helpers.dart' as helpers;
-import 'src/plural_rules.dart' as plural_rules;
+import 'date_symbols.dart';
+import 'number_symbols.dart';
+import 'number_symbols_data.dart';
+import 'src/date_format_internal.dart';
+import 'src/intl_helpers.dart';
+import 'package:intl/src/plural_rules.dart' as plural_rules;
 
-export 'src/intl/bidi.dart' show Bidi;
-export 'src/intl/bidi_formatter.dart' show BidiFormatter;
-export 'src/intl/date_format.dart' show DateFormat;
-export 'src/intl/micro_money.dart' show MicroMoney;
-export 'src/intl/number_format.dart' show NumberFormat;
-export 'src/intl/text_direction.dart' show TextDirection;
+part 'src/intl/bidi_formatter.dart';
+part 'src/intl/bidi_utils.dart';
+
+part 'src/intl/compact_number_format.dart';
+part 'src/intl/date_format.dart';
+part 'src/intl/date_format_field.dart';
+part 'src/intl/date_format_helpers.dart';
+part 'src/intl/number_format.dart';
 
 /// The Intl class provides a common entry point for internationalization
 /// related tasks. An Intl instance can be created for a particular locale
@@ -31,44 +45,46 @@ export 'src/intl/text_direction.dart' show TextDirection;
 /// on this class are also used in message formatting.
 ///
 /// Examples:
+///      today(date) => Intl.message(
+///          "Today's date is $date",
+///          name: 'today',
+///          args: [date],
+///          desc: 'Indicate the current date',
+///          examples: const {'date' : 'June 8, 2012'});
+///      print(today(new DateTime.now().toString());
 ///
-/// ```dart
-/// String today(DateTime date) => Intl.message(
-///       "Today's date is $date",
-///       name: 'today',
-///       args: [date],
-///       desc: 'Indicate the current date',
-///       examples: const {'date': 'June 8, 2012'},
-///     );
-/// print(today(DateTime.now().toString());
-///
-/// String howManyPeople(int numberOfPeople, String place) => Intl.plural(
-///       numberOfPeople,
-///       zero: 'I see no one at all in $place.',
-///       one: 'I see $numberOfPeople other person in $place.',
-///       other: 'I see $numberOfPeople other people in $place.',
-///       name: 'howManyPeople',
-///       args: [numberOfPeople, place],
-///       desc: 'Description of how many people are seen in a place.',
-///       examples: const {'numberOfPeople': 3, 'place': 'London'},
-///     );
-/// ```
+///      howManyPeople(numberOfPeople, place) => Intl.plural(numberOfPeople,
+///            zero: 'I see no one at all in $place.',
+///            one: 'I see $numberOfPeople other person in $place.',
+///            other: 'I see $numberOfPeople other people in $place.',
+///          name: 'howManyPeople',
+///          args: [numberOfPeople, place],
+///          desc: 'Description of how many people are seen in a place.',
+///          examples: const {'numberOfPeople': 3, 'place': 'London'});
 ///
 /// Calling `howManyPeople(2, 'Athens');` would
 /// produce "I see 2 other people in Athens." as output in the default locale.
 /// If run in a different locale it would produce appropriately translated
 /// output.
 ///
-/// You can set the default locale.
+/// For more detailed information on messages and localizing them see
+/// the main [package documentation](https://pub.dartlang.org/packages/intl)
 ///
-/// ```dart
-/// Intl.defaultLocale = 'pt_BR';
-/// ```
+/// You can set the default locale.
+///       Intl.defaultLocale = "pt_BR";
+///
+/// To temporarily use a locale other than the default, use the `withLocale`
+/// function.
+///       var todayString = new DateFormat("pt_BR").format(new DateTime.now());
+///       print(withLocale("pt_BR", () => today(todayString));
+///
+/// See `tests/message_format_test.dart` for more examples.
+//TODO(efortuna): documentation example involving the offset parameter?
 
 class Intl {
   /// String indicating the locale code with which the message is to be
   /// formatted (such as en-CA).
-  final String _locale;
+  String _locale;
 
   /// The default locale. This defaults to being set from systemLocale, but
   /// can also be set explicitly, and will then apply to any new instances where
@@ -77,38 +93,44 @@ class Intl {
   /// will supercede this value while that operation is active. Using
   /// [Intl.withLocale] may be preferable if you are using different locales
   /// in the same application.
-  static String? get defaultLocale => global_state.defaultLocale;
+  static String get defaultLocale {
+    var zoneLocale = Zone.current[#Intl.locale] as String;
+    return zoneLocale == null ? _defaultLocale : zoneLocale;
+  }
 
-  static set defaultLocale(String? newLocale) =>
-      global_state.defaultLocale = newLocale;
+  static set defaultLocale(String newLocale) {
+    _defaultLocale = newLocale;
+  }
+
+  static String _defaultLocale;
 
   /// The system's locale, as obtained from the window.navigator.language
   /// or other operating system mechanism. Note that due to system limitations
   /// this is not automatically set, and must be set by importing one of
   /// intl_browser.dart or intl_standalone.dart and calling findSystemLocale().
-  static String get systemLocale => global_state.systemLocale;
-  static set systemLocale(String locale) => global_state.systemLocale = locale;
+  static String systemLocale = 'en_US';
 
   /// Return a new date format using the specified [pattern].
   /// If [desiredLocale] is not specified, then we default to [locale].
-  DateFormat date([String? pattern, String? desiredLocale]) {
+  DateFormat date([String pattern, String desiredLocale]) {
     var actualLocale = (desiredLocale == null) ? locale : desiredLocale;
-    return DateFormat(pattern, actualLocale);
+    return new DateFormat(pattern, actualLocale);
   }
 
   /// Constructor optionally [aLocale] for specifics of the language
   /// locale to be used, otherwise, we will attempt to infer it (acceptable if
   /// Dart is running on the client, we can infer from the browser/client
   /// preferences).
-  Intl([String? aLocale])
-      : _locale = aLocale != null ? aLocale : getCurrentLocale();
+  Intl([String aLocale]) {
+    _locale = aLocale != null ? aLocale : getCurrentLocale();
+  }
 
   /// Use this for a message that will be translated for different locales. The
   /// expected usage is that this is inside an enclosing function that only
   /// returns the value of this call and provides a scope for the variables that
   /// will be substituted in the message.
   ///
-  /// The [messageText] is the string to be translated, which may be
+  /// The [message_str] is the string to be translated, which may be
   /// interpolated based on one or more variables.
   ///
   /// The [args] is a list containing the arguments of the enclosing function.
@@ -127,15 +149,12 @@ class Intl {
   /// The [examples] is a const Map of examples for each interpolated variable.
   /// For example
   ///
-  /// ```dart
-  /// String hello(String yourName) => Intl.message(
-  ///       'Hello, $yourName',
-  ///       name: 'hello',
-  ///       args: [yourName],
-  ///       desc: 'Say hello',
-  ///       examples: const {'yourName': 'Sparky'},
-  ///     );
-  /// ```
+  ///       hello(yourName) => Intl.message(
+  ///         "Hello, $yourName",
+  ///         name: "hello",
+  ///         args: [yourName],
+  ///         desc: "Say hello",
+  ///         examples: const {"yourName": "Sparky"});
   ///
   /// The source code will be processed via the analyzer to extract out the
   /// message data, so only a subset of valid Dart code is accepted. In
@@ -146,38 +165,32 @@ class Intl {
   /// be used at runtime but will be extracted from the source code and used as
   /// additional data for translators. For more information see the "Messages"
   /// section of the main
-  /// [package documentation] (https://pub.dev/packages/intl).
+  /// [package documentation] (https://pub.dartlang.org/packages/intl).
   ///
   /// The [skip] arg will still validate the message, but will be filtered from
   /// the extracted message output. This can be useful to set up placeholder
   /// messages during development whose text aren't finalized yet without having
   /// the placeholder automatically translated.
   @pragma('dart2js:tryInline')
-  @pragma('vm:prefer-inline')
-  // We want to try to inline these messages, but not inline the internal
-  // messages, so it will eliminate the descriptions and other information
-  // not needed at runtime.
-  static String message(String messageText,
-          {String? desc = '',
-          Map<String, Object>? examples,
-          String? locale,
-          String? name,
-          List<Object>? args,
-          String? meaning,
-          bool? skip}) =>
-      _message(messageText, locale, name, args, meaning);
+  // We want dart2js to try to inline these messages, but not inline the
+  // internal messages, so it will eliminate the descriptions and other
+  // information not neeeded at runtime.
+  static String message(String message_str,
+          {String desc: '',
+          Map<String, Object> examples,
+          String locale,
+          String name,
+          List<Object> args,
+          String meaning,
+          bool skip}) =>
+      _message(message_str, locale, name, args, meaning);
 
   /// Omit the compile-time only parameters so dart2js can see to drop them.
   @pragma('dart2js:noInline')
-  static String _message(String? messageText, String? locale, String? name,
-      List<Object>? args, String? meaning) {
-    return _lookupMessage(messageText, locale, name, args, meaning)!;
-  }
-
-  static String? _lookupMessage(String? messageText, String? locale,
-      String? name, List<Object>? args, String? meaning) {
-    return helpers.messageLookup
-        .lookupMessage(messageText, locale, name, args, meaning);
+  static String _message(String message_str, String locale, String name,
+      List<Object> args, String meaning) {
+    return messageLookup.lookupMessage(
+        message_str, locale, name, args, meaning);
   }
 
   /// Return the locale for this instance. If none was set, the locale will
@@ -199,23 +212,66 @@ class Intl {
   ///
   /// Note that null is interpreted as meaning the default locale, so if
   /// [newLocale] is null the default locale will be returned.
-  ///
-  /// Can return `null` only if verification fails and `onFailure` returns
-  /// null. Otherwise, throws instead.
-  static String? verifiedLocale(
-          String? newLocale, bool Function(String) localeExists,
-          {String? Function(String)? onFailure}) =>
-      helpers.verifiedLocale(newLocale, localeExists, onFailure);
+  static String verifiedLocale(
+      String newLocale, bool Function(String) localeExists,
+      {String Function(String) onFailure: _throwLocaleError}) {
+    // TODO(alanknight): Previously we kept a single verified locale on the Intl
+    // object, but with different verification for different uses, that's more
+    // difficult. As a result, we call this more often. Consider keeping
+    // verified locales for each purpose if it turns out to be a performance
+    // issue.
+    if (newLocale == null) {
+      return verifiedLocale(getCurrentLocale(), localeExists,
+          onFailure: onFailure);
+    }
+    if (localeExists(newLocale)) {
+      return newLocale;
+    }
+    for (var each in [
+      canonicalizedLocale(newLocale),
+      shortLocale(newLocale),
+      "fallback"
+    ]) {
+      if (localeExists(each)) {
+        return each;
+      }
+    }
+    return onFailure(newLocale);
+  }
+
+  /// The default action if a locale isn't found in verifiedLocale. Throw
+  /// an exception indicating the locale isn't correct.
+  static String _throwLocaleError(String localeName) {
+    throw new ArgumentError("Invalid locale '$localeName'");
+  }
 
   /// Return the short version of a locale name, e.g. 'en_US' => 'en'
-  static String shortLocale(String aLocale) => helpers.shortLocale(aLocale);
+  static String shortLocale(String aLocale) {
+    if (aLocale.length < 2) return aLocale;
+    return aLocale.substring(0, 2).toLowerCase();
+  }
 
   /// Return the name [aLocale] turned into xx_YY where it might possibly be
   /// in the wrong case or with a hyphen instead of an underscore. If
   /// [aLocale] is null, for example, if you tried to get it from IE,
   /// return the current system locale.
-  static String canonicalizedLocale(String? aLocale) =>
-      helpers.canonicalizedLocale(aLocale);
+  static String canonicalizedLocale(String aLocale) {
+    // Locales of length < 5 are presumably two-letter forms, or else malformed.
+    // We return them unmodified and if correct they will be found.
+    // Locales longer than 6 might be malformed, but also do occur. Do as
+    // little as possible to them, but make the '-' be an '_' if it's there.
+    // We treat C as a special case, and assume it wants en_ISO for formatting.
+    // TODO(alanknight): en_ISO is probably not quite right for the C/Posix
+    // locale for formatting. Consider adding C to the formats database.
+    if (aLocale == null) return getCurrentLocale();
+    if (aLocale == "C") return "en_ISO";
+    if (aLocale.length < 5) return aLocale;
+    if (aLocale[2] != '-' && (aLocale[2] != '_')) return aLocale;
+    var region = aLocale.substring(3);
+    // If it's longer than three it's something odd, so don't touch it.
+    if (region.length <= 3) region = region.toUpperCase();
+    return '${aLocale[0]}${aLocale[1]}_$region';
+  }
 
   /// Formats a message differently depending on [howMany].
   ///
@@ -228,22 +284,21 @@ class Intl {
   /// For an explanation of plurals and the [zero], [one], [two], [few], [many]
   /// categories see http://cldr.unicode.org/index/cldr-spec/plural-rules
   @pragma('dart2js:tryInline')
-  @pragma('vm:prefer-inline')
   static String plural(num howMany,
-      {String? zero,
-      String? one,
-      String? two,
-      String? few,
-      String? many,
-      required String other,
-      String? desc,
-      Map<String, Object>? examples,
-      String? locale,
-      int? precision,
-      String? name,
-      List<Object>? args,
-      String? meaning,
-      bool? skip}) {
+      {String zero,
+      String one,
+      String two,
+      String few,
+      String many,
+      String other,
+      String desc,
+      Map<String, Object> examples,
+      String locale,
+      int precision,
+      String name,
+      List<Object> args,
+      String meaning,
+      bool skip}) {
     // Call our internal method, dropping examples and desc because they're not
     // used at runtime and we want them to be optimized away.
     return _plural(howMany,
@@ -262,20 +317,20 @@ class Intl {
 
   @pragma('dart2js:noInline')
   static String _plural(num howMany,
-      {String? zero,
-      String? one,
-      String? two,
-      String? few,
-      String? many,
-      required String other,
-      String? locale,
-      int? precision,
-      String? name,
-      List<Object>? args,
-      String? meaning}) {
+      {String zero,
+      String one,
+      String two,
+      String few,
+      String many,
+      String other,
+      String locale,
+      int precision,
+      String name,
+      List<Object> args,
+      String meaning}) {
     // Look up our translation, but pass in a null message so we don't have to
     // eagerly evaluate calls that may not be necessary.
-    var translated = _lookupMessage(null, locale, name, args, meaning);
+    var translated = _message(null, locale, name, args, meaning);
 
     /// If there's a translation, return it, otherwise evaluate with our
     /// original text.
@@ -294,23 +349,20 @@ class Intl {
   /// Internal: Implements the logic for plural selection - use [plural] for
   /// normal messages.
   static T pluralLogic<T>(num howMany,
-      {T? zero,
-      T? one,
-      T? two,
-      T? few,
-      T? many,
-      required T other,
-      String? locale,
-      int? precision,
-      String? meaning}) {
-    ArgumentError.checkNotNull(other, 'other');
-    ArgumentError.checkNotNull(howMany, 'howMany');
-    // If we haven't specified precision and we have a float that is an integer
-    // value, turn it into an integer. This gives us the behavior that 1.0 and 1
-    // produce the same output, e.g. 1 dollar.
-    var truncated = howMany.truncate();
-    if (precision == null && truncated == howMany) {
-      howMany = truncated;
+      {T zero,
+      T one,
+      T two,
+      T few,
+      T many,
+      T other,
+      String locale,
+      int precision,
+      String meaning}) {
+    if (other == null) {
+      throw new ArgumentError("The 'other' named argument must be provided");
+    }
+    if (howMany == null) {
+      throw new ArgumentError("The howMany argument to plural cannot be null");
     }
 
     // This is for backward compatibility.
@@ -346,43 +398,41 @@ class Intl {
       case plural_rules.PluralCase.OTHER:
         return other;
       default:
-        throw ArgumentError.value(
-            howMany, 'howMany', 'Invalid plural argument');
+        throw new ArgumentError.value(
+            howMany, "howMany", "Invalid plural argument");
     }
   }
 
-  static plural_rules.PluralRule? _cachedPluralRule;
-  static String? _cachedPluralLocale;
+  static var _cachedPluralRule;
+  static String _cachedPluralLocale;
 
-  static plural_rules.PluralRule _pluralRule(
-      String? locale, num howMany, int? precision) {
+  static _pluralRule(String locale, num howMany, int precision) {
     plural_rules.startRuleEvaluation(howMany, precision);
     var verifiedLocale = Intl.verifiedLocale(
         locale, plural_rules.localeHasPluralRules,
         onFailure: (locale) => 'default');
     if (_cachedPluralLocale == verifiedLocale) {
-      return _cachedPluralRule!;
+      return _cachedPluralRule;
     } else {
       _cachedPluralRule = plural_rules.pluralRules[verifiedLocale];
       _cachedPluralLocale = verifiedLocale;
-      return _cachedPluralRule!;
+      return _cachedPluralRule;
     }
   }
 
   /// Format a message differently depending on [targetGender].
   @pragma('dart2js:tryInline')
-  @pragma('vm:prefer-inline')
   static String gender(String targetGender,
-      {String? female,
-      String? male,
-      required String other,
-      String? desc,
-      Map<String, Object>? examples,
-      String? locale,
-      String? name,
-      List<Object>? args,
-      String? meaning,
-      bool? skip}) {
+      {String female,
+      String male,
+      String other,
+      String desc,
+      Map<String, Object> examples,
+      String locale,
+      String name,
+      List<Object> args,
+      String meaning,
+      bool skip}) {
     // Call our internal method, dropping args and desc because they're not used
     // at runtime and we want them to be optimized away.
     return _gender(targetGender,
@@ -397,16 +447,17 @@ class Intl {
 
   @pragma('dart2js:noInline')
   static String _gender(String targetGender,
-      {String? female,
-      String? male,
-      required String other,
-      String? locale,
-      String? name,
-      List<Object>? args,
-      String? meaning}) {
+      {String female,
+      String male,
+      String other,
+      String desc,
+      String locale,
+      String name,
+      List<Object> args,
+      String meaning}) {
     // Look up our translation, but pass in a null message so we don't have to
     // eagerly evaluate calls that may not be necessary.
-    var translated = _lookupMessage(null, locale, name, args, meaning);
+    var translated = _message(null, locale, name, args, meaning);
 
     /// If there's a translation, return it, otherwise evaluate with our
     /// original text.
@@ -417,13 +468,15 @@ class Intl {
 
   /// Internal: Implements the logic for gender selection - use [gender] for
   /// normal messages.
-  static T genderLogic<T>(String targetGender,
-      {T? female, T? male, required T other, String? locale}) {
-    ArgumentError.checkNotNull(other, 'other');
+  static genderLogic(String targetGender,
+      {female, male, other, String locale}) {
+    if (other == null) {
+      throw new ArgumentError("The 'other' named argument must be specified");
+    }
     switch (targetGender) {
-      case 'female':
+      case "female":
         return female == null ? other : female;
-      case 'male':
+      case "male":
         return male == null ? other : male;
       default:
         return other;
@@ -445,28 +498,27 @@ class Intl {
   ///
   /// The first argument in [args] must correspond to the [choice] Object.
   @pragma('dart2js:tryInline')
-  @pragma('vm:prefer-inline')
   static String select(Object choice, Map<Object, String> cases,
-      {String? desc,
-      Map<String, Object>? examples,
-      String? locale,
-      String? name,
-      List<Object>? args,
-      String? meaning,
-      bool? skip}) {
+      {String desc,
+      Map<String, Object> examples,
+      String locale,
+      String name,
+      List<Object> args,
+      String meaning,
+      bool skip}) {
     return _select(choice, cases,
         locale: locale, name: name, args: args, meaning: meaning);
   }
 
   @pragma('dart2js:noInline')
   static String _select(Object choice, Map<Object, String> cases,
-      {String? locale, String? name, List<Object>? args, String? meaning}) {
+      {String locale, String name, List<Object> args, String meaning}) {
     // Look up our translation, but pass in a null message so we don't have to
     // eagerly evaluate calls that may not be necessary.
-    var stringChoice = choice is String ? choice : '$choice'.split('.').last;
+    var stringChoice = choice is String ? choice : "$choice".split('.').last;
     var modifiedArgs =
         args == null ? null : (<Object>[stringChoice]..addAll(args.skip(1)));
-    var translated = _lookupMessage(null, locale, name, modifiedArgs, meaning);
+    var translated = _message(null, locale, name, modifiedArgs, meaning);
 
     /// If there's a translation, return it, otherwise evaluate with our
     /// original text.
@@ -475,7 +527,7 @@ class Intl {
 
   /// Internal: Implements the logic for select - use [select] for
   /// normal messages.
-  static T selectLogic<T>(Object choice, Map<Object, T> cases) {
+  static selectLogic(Object choice, Map<Object, dynamic> cases) {
     // This will work if choice is a string, or if it's e.g. an
     // enum and the map uses the enum values as choices.
     var exact = cases[choice];
@@ -484,13 +536,12 @@ class Intl {
     // take the part after the period. We need to do this
     // because enums print as 'EnumType.enumName' and periods
     // aren't acceptable in ICU select choices.
-    var stringChoice = '$choice'.split('.').last;
+    var stringChoice = "$choice".split('.').last;
     var stringMatch = cases[stringChoice];
     if (stringMatch != null) return stringMatch;
-    var other = cases['other'];
-    if (other == null) {
-      throw ArgumentError("The 'other' case must be specified");
-    }
+    var other = cases["other"];
+    if (other == null)
+      throw new ArgumentError("The 'other' case must be specified");
     return other;
   }
 
@@ -506,18 +557,18 @@ class Intl {
   ///
   /// For example
   ///
-  ///       Intl.withLocale('fr', () => NumberFormat.format(123456));
+  ///       Intl.withLocale("fr", () => new NumberFormat.format(123456));
   ///
   /// or
   ///
   ///       hello(name) => Intl.message(
-  ///           'Hello $name.',
+  ///           "Hello $name.",
   ///           name: 'hello',
   ///           args: [name],
   ///           desc: 'Say Hello');
-  ///       Intl.withLocale('zh', Timer(Duration(milliseconds:10),
-  ///           () => print(hello('World')));
-  static dynamic withLocale<T>(String? locale, T Function() function) {
+  ///       Intl.withLocale("zh", new Timer(new Duration(milliseconds:10),
+  ///           () => print(hello("World")));
+  static dynamic withLocale<T>(String locale, T Function() function) {
     // TODO(alanknight): Make this return T. This requires work because T might
     // be Future and the caller could get an unawaited Future.  Which is
     // probably an error in their code, but the change is semi-breaking.
@@ -529,10 +580,11 @@ class Intl {
   /// unless for some reason this gets called inside a message that resets the
   /// locale.
   static String getCurrentLocale() {
-    return defaultLocale ??= systemLocale;
+    if (defaultLocale == null) defaultLocale = systemLocale;
+    return defaultLocale;
   }
 
-  String toString() => 'Intl($locale)';
+  toString() => "Intl($locale)";
 }
 
 /// Convert a string to beginning of sentence case, in a way appropriate to the
@@ -542,9 +594,9 @@ class Intl {
 /// many locales, and we have the option to extend this to handle more cases
 /// without changing the API for clients. It also hard-codes the case of
 /// dotted i in Turkish and Azeri.
-String? toBeginningOfSentenceCase(String? input, [String? locale]) {
+String toBeginningOfSentenceCase(String input, [String locale]) {
   if (input == null || input.isEmpty) return input;
-  return '${_upperCaseLetter(input[0], locale)}${input.substring(1)}';
+  return "${_upperCaseLetter(input[0], locale)}${input.substring(1)}";
 }
 
 /// Convert the input single-letter string to upper case. A trivial
@@ -556,11 +608,11 @@ String? toBeginningOfSentenceCase(String? input, [String? locale]) {
 // See http://www.unicode.org/Public/UNIDATA/SpecialCasing.txt
 // TODO(alanknight): Alternatively, consider toLocaleUpperCase in browsers.
 // See also https://github.com/dart-lang/sdk/issues/6706
-String _upperCaseLetter(String input, String? locale) {
+String _upperCaseLetter(String input, String locale) {
   // Hard-code the important edge case of i->İ
   if (locale != null) {
-    if (input == 'i' && locale.startsWith('tr') || locale.startsWith('az')) {
-      return '\u0130';
+    if (input == "i" && locale.startsWith("tr") || locale.startsWith("az")) {
+      return "\u0130";
     }
   }
   return input.toUpperCase();

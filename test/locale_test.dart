@@ -9,8 +9,9 @@
 ///
 /// For production code, use of ICU would influence what needs and doesn't need
 /// to be tested.
-import 'package:intl/locale.dart';
+
 import 'package:test/test.dart';
+import 'package:intl/src/locale.dart';
 
 import 'locale_test_data.dart';
 
@@ -37,8 +38,7 @@ void main() {
   });
 
   group('Locale.fromSubtags() FormatExceptions:', () {
-    void testExceptionForSubtags(
-        String language, String? script, String? region) {
+    testExceptionForSubtags(String language, String script, String region) {
       test('fromSubtags: "$language / $script / $region"', () {
         expect(
             () => Locale.fromSubtags(
@@ -108,15 +108,15 @@ void main() {
       [], 'en-u-co-phonebk-cu-usd-z-abc-001-foo-fii-bar');
 
   group('Locale.parse() throws FormatException:', () {
-    void testExceptionForId(String x) {
+    testExceptionForId(String x) {
       test('"$x"', () {
         expect(() => Locale.parse(x), throwsFormatException);
       });
     }
 
-    for (var badLocaleIdentifier in invalidLocales) {
+    invalidLocales.forEach((badLocaleIdentifier) {
       testExceptionForId(badLocaleIdentifier);
-    }
+    });
 
     // ICU permits '', taking it as 'und', but it is not a valid Unicode Locale
     // Identifier: We reject it.
@@ -144,11 +144,11 @@ void main() {
   });
 
   group('Locale.tryParse() returns null:', () {
-    for (var badLocaleIdentifier in invalidLocales) {
+    invalidLocales.forEach((badLocaleIdentifier) {
       test('"$badLocaleIdentifier"', () {
         expect(Locale.tryParse(badLocaleIdentifier), isNull);
       });
-    }
+    });
   });
 
   // TODO: determine appropriate behaviour for the following examples.
@@ -173,8 +173,8 @@ void main() {
 
   test('Locale cannot be modified via the variants field', () {
     var l = Locale.parse('en-scotland');
-    var v = l.variants as List<String>;
-    var good = false;
+    List<String> v = l.variants;
+    bool good = false;
     try {
       v.add('basiceng');
     } on Error {
@@ -201,16 +201,16 @@ void main() {
   });
 }
 
-void testFromSubtags(
+testFromSubtags(
     String language,
-    String? script,
-    String? region,
-    String? expectedLanguage,
-    String? expectedScript,
-    String? expectedRegion,
-    String? expectedTag) {
+    String script,
+    String region,
+    String expectedLanguage,
+    String expectedScript,
+    String expectedRegion,
+    String expectedTag) {
   test('Locale.fromSubtags(...) with $language, $script, $region', () {
-    var l = Locale.fromSubtags(
+    Locale l = Locale.fromSubtags(
         languageCode: language, scriptCode: script, countryCode: region);
     expect(l.languageCode, expectedLanguage);
     expect(l.scriptCode, expectedScript);
@@ -220,15 +220,15 @@ void testFromSubtags(
   });
 }
 
-void testParse(
+testParse(
     String bcp47Tag,
     String expectedLanguage,
-    String? expectedScript,
-    String? expectedRegion,
+    String expectedScript,
+    String expectedRegion,
     Iterable<String> expectedVariants,
-    String? expectedTag) {
+    String expectedTag) {
   test('Locale.parse("$bcp47Tag");', () {
-    var l = Locale.parse(bcp47Tag);
+    Locale l = Locale.parse(bcp47Tag);
     expect(l.languageCode, expectedLanguage);
     expect(l.scriptCode, expectedScript);
     expect(l.countryCode, expectedRegion);

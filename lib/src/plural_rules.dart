@@ -16,12 +16,9 @@
 /// * t	- visible fractional digits in n, without trailing zeros.
 library plural_rules;
 
-// Suppress naming issues as changing them might be breaking.
-// ignore_for_file: constant_identifier_names, non_constant_identifier_names
-
 import 'dart:math' as math;
 
-typedef PluralRule = PluralCase Function();
+typedef PluralCase PluralRule();
 
 /// The possible cases used in a plural rule.
 enum PluralCase { ZERO, ONE, TWO, FEW, MANY, OTHER }
@@ -31,11 +28,11 @@ PluralCase _default_rule() => OTHER;
 
 /// This must be called before evaluating a new rule, because we're using
 /// library-global state to both keep the rules terse and minimize space.
-void startRuleEvaluation(num howMany, [int? precision = 0]) {
+startRuleEvaluation(num howMany, [int precision = 0]) {
   _n = howMany;
   _precision = precision;
   _i = _n.round();
-  _updateVF(_n);
+  _updateVF(_n, _precision);
   _updateWT(_f, _v);
 }
 
@@ -46,21 +43,21 @@ void startRuleEvaluation(num howMany, [int? precision = 0]) {
 // not introduce a subclass per locale or have instance tear-offs which
 // we can't cache. This is fine as long as these methods aren't async, which
 // they should never be.
-num _n = 0;
+num _n;
 
 /// The integer part of [_n]
-int _i = 0;
-int? _precision;
+int _i;
+int _precision;
 
 /// Returns the number of digits in the fractional part of a number
 /// (3.1416 => 4)
 ///
-/// Takes the item count [n] and uses [_precision].
+/// Takes the item count [n] and a [precision].
 /// That's because a just looking at the value of a number is not enough to
 /// decide the plural form. For example "1 dollar" vs "1.00 dollars", the
 /// value is 1, but how it is formatted also matters.
-int _decimals(num n) {
-  var str = _precision == null ? '$n' : n.toStringAsFixed(_precision!);
+int _decimals(num n, int precision) {
+  var str = _precision == null ? '$n' : n.toStringAsFixed(precision);
   var result = str.indexOf('.');
   return (result == -1) ? 0 : str.length - result - 1;
 }
@@ -70,12 +67,12 @@ int _decimals(num n) {
 /// The short names for parameters / return match the CLDR syntax and UTS #35
 ///     (https://unicode.org/reports/tr35/tr35-numbers.html#Plural_rules_syntax)
 /// Takes the item count [n] and a [precision].
-void _updateVF(num n) {
-  var defaultDigits = 3;
+_updateVF(num n, int precision) {
+  int defaultDigits = 3;
 
-  _v = _precision ?? math.min(_decimals(n), defaultDigits);
+  _v = precision ?? math.min(_decimals(n, precision), defaultDigits);
 
-  var base = math.pow(10, _v) as int;
+  int base = math.pow(10, _v);
   _f = (n * base).floor() % base;
 }
 
@@ -85,7 +82,7 @@ void _updateVF(num n) {
 ///     (https://unicode.org/reports/tr35/tr35-numbers.html#Plural_rules_syntax)
 /// @param v Calculated previously.
 /// @param f Calculated previously.
-void _updateWT(int v, int f) {
+_updateWT(int v, int f) {
   if (f == 0) {
     // Unused, for now _w = 0;
     _t = 0;
@@ -444,7 +441,7 @@ PluralCase _ak_rule() {
 }
 
 /// Selected Plural rules by locale.
-final pluralRules = {
+final Map pluralRules = {
   'af': _es_rule,
   'am': _hi_rule,
   'ar': _ar_rule,

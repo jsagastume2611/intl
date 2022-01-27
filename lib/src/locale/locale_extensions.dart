@@ -14,9 +14,9 @@ class LocaleExtensions {
   /// Keys in each of the maps passed to this contructor must be syntactically
   /// valid extension keys, and must already be normalized (correct case).
   LocaleExtensions(
-      Map<String, String>? uExtensions,
-      Map<String, String>? tExtensions,
-      Map<String, String>? otherExtensions,
+      Map<String, String> uExtensions,
+      Map<String, String> tExtensions,
+      Map<String, String> otherExtensions,
       this._xExtensions)
       : _uExtensions = _sortedUnmodifiable(uExtensions),
         _tExtensions = _sortedUnmodifiable(tExtensions),
@@ -59,9 +59,8 @@ class LocaleExtensions {
         otherExtensions == null ||
             otherExtensions.entries.every((e) {
               if (!_otherExtensionsValidKeysRE.hasMatch(e.key)) return false;
-              if (!_otherExtensionsValidValuesRE.hasMatch(e.value)) {
+              if (!_otherExtensionsValidValuesRE.hasMatch(e.value))
                 return false;
-              }
               return true;
             }),
         'otherExtensions keys must match '
@@ -70,7 +69,7 @@ class LocaleExtensions {
         'RegExp/${_otherExtensionsValidValuesRE.pattern}. '
         'Entries: ${otherExtensions.entries}.');
     assert(
-        _xExtensions == null || _validXExtensionsRE.hasMatch(_xExtensions!),
+        _xExtensions == null || _validXExtensionsRE.hasMatch(_xExtensions),
         '_xExtensions must match RegExp/${_validXExtensionsRE.pattern}/ '
         'but is "$_xExtensions".');
   }
@@ -150,21 +149,21 @@ class LocaleExtensions {
   /// are stored under normalized (lowercased) `key`. See
   /// http://www.unicode.org/reports/tr35/#unicode_locale_extensions for
   /// details.
-  final Map<String, String> _uExtensions;
+  Map<String, String> _uExtensions;
 
   /// `-t-` extension, with keys in sorted order. tlang attributes are stored
   /// under the zero-length string as key. See
   /// http://www.unicode.org/reports/tr35/#transformed_extensions for
   /// details.
-  final Map<String, String> _tExtensions;
+  Map<String, String> _tExtensions;
 
   /// Other extensions, with keys in sorted order. See
   /// http://www.unicode.org/reports/tr35/#other_extensions for details.
-  final Map<String, String> _otherExtensions;
+  Map<String, String> _otherExtensions;
 
   /// -x- extension values. See
   /// http://www.unicode.org/reports/tr35/#pu_extensions for details.
-  final String? _xExtensions;
+  String _xExtensions;
 
   /// List of subtags in the [Unicode Locale
   /// Identifier](https://www.unicode.org/reports/tr35/#Unicode_locale_identifier)
@@ -178,11 +177,11 @@ class LocaleExtensions {
   /// unicode_language_id and '-' as delimiter to provide a UTS #35 compliant
   /// normalized Locale Identifier.
   List<String> get subtags {
-    final result = <String>[];
-    final resultVWYZ = <String>[];
+    final List<String> result = [];
+    final List<String> resultVWYZ = [];
 
     _otherExtensions.forEach((singleton, value) {
-      final letter = (singleton.codeUnitAt(0) - 0x61) & 0xFFFF;
+      final int letter = (singleton.codeUnitAt(0) - 0x61) & 0xFFFF;
       // 't', 'u' and 'x' are handled by other members.
       assert(letter < 26 && letter != 19 && letter != 20 && letter != 23);
       if (letter < 19) {
@@ -210,20 +209,20 @@ class LocaleExtensions {
       result.addAll(resultVWYZ);
     }
     if (_xExtensions != null) {
-      result.add('x-$_xExtensions');
+      result.add('x-${_xExtensions}');
     }
     return result;
   }
 }
 
 /// Creates an unmodifiable and sorted version of `unsorted`.
-Map<String, String> _sortedUnmodifiable(Map<String, String>? unsorted) {
+Map<String, String> _sortedUnmodifiable(Map<String, String> unsorted) {
   if (unsorted == null) {
     return const {};
   }
-  var map = <String, String>{};
+  Map<String, String> map = {};
   for (var key in unsorted.keys.toList()..sort()) {
-    map[key] = unsorted[key]!;
+    map[key] = unsorted[key];
   }
   return Map.unmodifiable(map);
 }

@@ -9,9 +9,9 @@
 
 library date_time_format_test_1;
 
-import 'package:intl/date_symbol_data_local.dart';
 import 'date_time_format_test_stub.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
+main() {
   runWith(oddLocales, null, initializeDateFormatting);
 }
