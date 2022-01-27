@@ -11,8 +11,8 @@
 ///   run things by default
 library data_directory;
 
-import "dart:io";
-import "package:path/path.dart" as path;
+import 'dart:io';
+import 'package:path/path.dart' as path;
 
 String get dataDirectory {
   return path.join(intlDirectory, datesRelativeToIntl);
@@ -21,25 +21,25 @@ String get dataDirectory {
 /// Returns whether [dir] is the root of the `intl` package. We validate that it
 /// is by looking for a pubspec file with the entry `name: intl`.
 bool _isIntlRoot(String dir) {
-  var file = new File(path.join(dir, 'pubspec.yaml'));
+  var file = File(path.join(dir, 'pubspec.yaml'));
   if (!file.existsSync()) return false;
   return file.readAsStringSync().contains('name: intl\n');
 }
 
 String get intlDirectory {
-  var dir;
-  if (Platform.script.scheme == 'file') {
-    dir = path.fromUri(Platform.script);
-  } else {
-    dir = Directory.current.absolute.path;
-  }
+  // Try the current directory.
+  if (_isIntlRoot(Directory.current.path)) return Directory.current.path;
+
+  // Search upwards from the script location.
+  var dir = path.fromUri(Platform.script);
   var root = path.rootPrefix(dir);
 
   while (dir != root) {
     if (_isIntlRoot(dir)) return dir;
     dir = path.dirname(dir);
   }
-  throw new UnsupportedError(
+
+  throw UnsupportedError(
       'Cannot find the root directory of the `intl` package.');
 }
 

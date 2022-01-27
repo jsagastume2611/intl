@@ -19,7 +19,7 @@ import 'package:intl/src/intl_helpers.dart';
 /// of individual [MessageLookupByLibrary] instances.
 class CompositeMessageLookup implements MessageLookup {
   /// A map from locale names to the corresponding lookups.
-  Map<String, MessageLookupByLibrary> availableMessages = new Map();
+  Map<String, MessageLookupByLibrary> availableMessages = Map();
 
   /// Return true if we have a message lookup for [localeName].
   bool localeExists(localeName) => availableMessages.containsKey(localeName);
@@ -28,18 +28,17 @@ class CompositeMessageLookup implements MessageLookup {
   ///
   ///  If this locale matches the new one then we can skip looking up the
   ///  messages and assume they will be the same as last time.
-  String _lastLocale;
+  String? _lastLocale;
 
   /// Caches the last messages that we found
-  MessageLookupByLibrary _lastLookup;
+  MessageLookupByLibrary? _lastLookup;
 
   /// Look up the message with the given [name] and [locale] and return the
   /// translated version with the values in [args] interpolated.  If nothing is
-  /// found, return the result of [ifAbsent] or [message_str]. The
-  /// [desc] and [examples] parameters are ignored
-  String lookupMessage(
-      String message_str, String locale, String name, List args, String meaning,
-      {MessageIfAbsent ifAbsent}) {
+  /// found, return the result of [ifAbsent] or [messageText].
+  String? lookupMessage(String? messageText, String? locale, String? name,
+      List<Object>? args, String? meaning,
+      {MessageIfAbsent? ifAbsent}) {
     // If passed null, use the default.
     var knownLocale = locale ?? Intl.getCurrentLocale();
     var messages = (knownLocale == _lastLocale)
@@ -48,14 +47,14 @@ class CompositeMessageLookup implements MessageLookup {
     // If we didn't find any messages for this locale, use the original string,
     // faking interpolations if necessary.
     if (messages == null) {
-      return ifAbsent == null ? message_str : ifAbsent(message_str, args);
+      return ifAbsent == null ? messageText : ifAbsent(messageText, args);
     }
-    return messages.lookupMessage(message_str, locale, name, args, meaning,
+    return messages.lookupMessage(messageText, locale, name, args, meaning,
         ifAbsent: ifAbsent);
   }
 
   /// Find the right message lookup for [locale].
-  MessageLookupByLibrary _lookupMessageCatalog(String locale) {
+  MessageLookupByLibrary? _lookupMessageCatalog(String locale) {
     var verifiedLocale = Intl.verifiedLocale(locale, localeExists,
         onFailure: (locale) => locale);
     _lastLocale = locale;
@@ -88,34 +87,26 @@ class CompositeMessageLookup implements MessageLookup {
 abstract class MessageLookupByLibrary {
   /// Return the localized version of a message. We are passed the original
   /// version of the message, which consists of a
-  /// [message_str] that will be translated, and which may be interpolated
-  /// based on one or more variables, a [desc] providing a description of usage
-  /// for the [message_str], and a map of [examples] for each data element to be
-  /// substituted into the message.
+  /// [messageText] that will be translated, and which may be interpolated
+  /// based on one or more variables.
   ///
   /// For example, if message="Hello, $name", then
   /// examples = {'name': 'Sparky'}. If not using the user's default locale, or
   /// if the locale is not easily detectable, explicitly pass [locale].
   ///
-  /// The values of [desc] and [examples] are not used at run-time but are only
-  /// made available to the translators, so they MUST be simple Strings
-  /// available at compile time: no String interpolation or concatenation.  The
-  /// expected usage of this is inside a function that takes as parameters the
-  /// variables used in the interpolated string.
-  ///
   /// Ultimately, the information about the enclosing function and its arguments
   /// will be extracted automatically but for the time being it must be passed
   /// explicitly in the [name] and [args] arguments.
-  String lookupMessage(
-      String message_str, String locale, String name, List args, String meaning,
-      {MessageIfAbsent ifAbsent}) {
-    var notFound = false;
-    var actualName = computeMessageName(name, message_str, meaning);
-    if (actualName == null) notFound = true;
-    var translation = this[actualName];
-    notFound = notFound || (translation == null);
-    if (notFound) {
-      return ifAbsent == null ? message_str : ifAbsent(message_str, args);
+  String? lookupMessage(String? messageText, String? locale, String? name,
+      List<Object>? args, String? meaning,
+      {MessageIfAbsent? ifAbsent}) {
+    var actualName = computeMessageName(name, messageText, meaning);
+    Object? translation;
+    if (actualName != null) {
+      translation = this[actualName];
+    }
+    if (translation == null) {
+      return ifAbsent == null ? messageText : ifAbsent(messageText, args);
     } else {
       args = args ?? const [];
       return evaluateMessage(translation, args);
@@ -123,12 +114,12 @@ abstract class MessageLookupByLibrary {
   }
 
   /// Evaluate the translated message and return the translated string.
-  String evaluateMessage(translation, List args) {
+  String? evaluateMessage(translation, List<dynamic> args) {
     return Function.apply(translation, args);
   }
 
   /// Return our message with the given name
-  operator [](String messageName) => messages[messageName];
+  dynamic operator [](String messageName) => messages[messageName];
 
   /// Subclasses should override this to return a list of their message
   /// implementations. In this class these are functions, but subclasses may
@@ -138,9 +129,10 @@ abstract class MessageLookupByLibrary {
   /// Subclasses should override this to return their locale, e.g. 'en_US'
   String get localeName;
 
-  toString() => localeName;
+  String toString() => localeName;
 
   /// Return a function that returns the given string.
   /// An optimization for dart2js, used from the generated code.
-  static simpleMessage(translatedString) => () => translatedString;
+  static String Function() simpleMessage(translatedString) =>
+      () => translatedString;
 }

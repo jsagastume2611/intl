@@ -7,19 +7,20 @@
 
 library date_time_format_test;
 
-import 'dart:async';
-import 'package:test/test.dart';
 import 'package:intl/intl.dart';
+import 'package:test/test.dart';
+
 import 'date_time_format_test_core.dart';
 
-typedef List<String> TestListFunc();
+typedef TestListFunc = List<String> Function();
 
-typedef Future InitializeDateFormattingFunc(String locale, String filePath);
+typedef InitializeDateFormattingFunc = Future<void> Function(
+    String locale, String filePath);
 
 /// Return only the odd-numbered locales. A simple way to divide the list into
 /// two roughly equal parts.
 List<String> oddLocales() {
-  int i = 1;
+  var i = 1;
   return allLocales().where((x) => (i++).isOdd).toList();
 }
 
@@ -31,25 +32,28 @@ List<String> smallSetOfLocales() {
 /// Return only the even-numbered locales. A simple way to divide the list into
 /// two roughly equal parts.
 List<String> evenLocales() {
-  int i = 1;
-  return allLocales().where((x) => !((i++).isOdd)).toList();
+  var i = 1;
+  return allLocales().where((x) => !(i++).isOdd).toList();
 }
 
-void runWith(TestListFunc getSubset, String dir,
+void runWith(TestListFunc getSubset, String? dir,
     InitializeDateFormattingFunc initFunction) {
+  var notNullDir = dir ?? '';
+
   // Initialize one locale just so we know what the list is.
   // Also, note that we take the list of locales as a function so that we don't
   // evaluate it until after we know that all the locales are available.
 
-  bool initialized = false;
+  var initialized = false;
 
   setUp(() {
     if (initialized) {
       return null;
     }
-    return initFunction("en_US", dir).then((_) {
-      return Future.forEach(DateFormat.allLocalesWithSymbols(), (locale) {
-        return initFunction(locale, dir);
+    return initFunction('en_US', notNullDir).then((_) {
+      return Future.forEach(DateFormat.allLocalesWithSymbols(),
+          (String locale) {
+        return initFunction(locale, notNullDir);
       });
     }).then((_) {
       initialized = true;

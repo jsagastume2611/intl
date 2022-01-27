@@ -12,9 +12,8 @@
 
 library date_format_internal;
 
-import 'dart:async';
-import 'intl_helpers.dart';
 import '../date_symbols.dart';
+import 'intl_helpers.dart';
 
 /// This holds the symbols to be used for date/time formatting, indexed
 /// by locale. Note that it will be set differently during initialization,
@@ -37,14 +36,14 @@ set dateTimeSymbols(dynamic symbols) {
   lastDateSymbolLocale = null;
 }
 
-dynamic _dateTimeSymbols = new UninitializedLocaleData(
-    'initializeDateFormatting(<locale>)', en_USSymbols);
+dynamic _dateTimeSymbols =
+    UninitializedLocaleData('initializeDateFormatting(<locale>)', en_USSymbols);
 
 /// Cache the last used symbols to reduce repeated lookups.
-DateSymbols cachedDateSymbols;
+DateSymbols? cachedDateSymbols;
 
 /// Which locale was last used for symbol lookup.
-String lastDateSymbolLocale;
+String? lastDateSymbolLocale;
 
 /// This holds the patterns used for date/time formatting, indexed
 /// by locale. Note that it will be set differently during initialization,
@@ -53,7 +52,7 @@ String lastDateSymbolLocale;
 /// result in an informative error message.
 // TODO(alanknight): Have a valid type for this. Currently it can be an
 // UninitializedLocaleData, Map, or LazyLocaleData.
-dynamic dateTimePatterns = new UninitializedLocaleData(
+dynamic dateTimePatterns = UninitializedLocaleData(
     'initializeDateFormatting(<locale>)', en_USPatterns);
 
 /// Initialize the symbols dictionary. This should be passed a function that
@@ -61,7 +60,7 @@ dynamic dateTimePatterns = new UninitializedLocaleData(
 /// initializing the data is an expensive operation it need only be done once,
 /// no matter how many times this method is called.
 void initializeDateSymbols(Function symbols) {
-  if (dateTimeSymbols is UninitializedLocaleData) {
+  if (dateTimeSymbols is UninitializedLocaleData<dynamic>) {
     dateTimeSymbols = symbols();
   }
 }
@@ -71,11 +70,11 @@ void initializeDateSymbols(Function symbols) {
 /// initializing the data is an expensive operation it need only be done once,
 /// no matter how many times this method is called.
 void initializeDatePatterns(Function patterns) {
-  if (dateTimePatterns is UninitializedLocaleData) {
+  if (dateTimePatterns is UninitializedLocaleData<dynamic>) {
     dateTimePatterns = patterns();
   }
 }
 
-Future initializeIndividualLocaleDateFormatting(Function init) {
+Future<dynamic> initializeIndividualLocaleDateFormatting(Function init) {
   return init(dateTimeSymbols, dateTimePatterns);
 }

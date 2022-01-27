@@ -2,50 +2,23 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-part of intl;
-
 /// Bidi stands for Bi-directional text.  According to
 /// http://en.wikipedia.org/wiki/Bi-directional_text: Bi-directional text is
 /// text containing text in both text directionalities, both right-to-left (RTL)
 /// and left-to-right (LTR). It generally involves text containing different
 /// types of alphabets, but may also refer to boustrophedon, which is changing
 /// text directionality in each row.
-///
-/// This file provides some utility classes for determining directionality of
-/// text, switching CSS layout from LTR to RTL, and other normalizing utilities
-/// needed when switching between RTL and LTR formatting.
-///
-/// It defines the TextDirection class which is used to represent directionality
-/// of text,
-/// In most cases, it is preferable to use bidi_formatter.dart, which provides
-/// bidi functionality in the given directional context, instead of using
-/// bidi_utils.dart directly.
-class TextDirection {
-  static const LTR = const TextDirection._('LTR', 'ltr');
-  static const RTL = const TextDirection._('RTL', 'rtl');
-  // If the directionality of the text cannot be determined and we are not using
-  // the context direction (or if the context direction is unknown), then the
-  // text falls back on the more common ltr direction.
-  static const UNKNOWN = const TextDirection._('UNKNOWN', 'ltr');
 
-  /// Textual representation of the directionality constant. One of
-  /// 'LTR', 'RTL', or 'UNKNOWN'.
-  final String value;
+import '../global_state.dart' as global_state;
+import 'text_direction.dart';
 
-  /// Textual representation of the directionality when used in span tag.
-  final String spanText;
-
-  const TextDirection._(this.value, this.spanText);
-
-  /// Returns true if [otherDirection] is known to be different from this
-  /// direction.
-  bool isDirectionChange(TextDirection otherDirection) =>
-      otherDirection != TextDirection.UNKNOWN && this != otherDirection;
-}
-
+// Suppress naming issues as changing them would be breaking.
+// ignore_for_file: constant_identifier_names
+// ignore: avoid_classes_with_only_static_members
 /// This provides utility methods for working with bidirectional text. All
 /// of the methods are static, and are organized into a class primarily to
 /// group them together for documentation and discoverability.
+// TODO(alanknight): Consider a better way of organizing these.
 class Bidi {
   /// Unicode "Left-To-Right Embedding" (LRE) character.
   static const LRE = '\u202A';
@@ -63,7 +36,7 @@ class Bidi {
   static const RLM = '\u200F';
 
   /// Constant to define the threshold of RTL directionality.
-  static num _RTL_DETECTION_THRESHOLD = 0.40;
+  static const _RTL_DETECTION_THRESHOLD = 0.40;
 
   /// Practical patterns to identify strong LTR and RTL characters,
   /// respectively.  These patterns are not completely correct according to the
@@ -86,20 +59,20 @@ class Bidi {
     // The regular expression is simplified for an HTML tag (opening or
     // closing) or an HTML escape. We might want to skip over such expressions
     // when estimating the text directionality.
-    return text.replaceAll(new RegExp(r'<[^>]*>|&[^;]+;'), ' ');
+    return text.replaceAll(RegExp(r'<[^>]*>|&[^;]+;'), ' ');
   }
 
   /// Determines if the first character in [text] with strong directionality is
   /// LTR. If [isHtml] is true, the text is HTML or HTML-escaped.
   static bool startsWithLtr(String text, [isHtml = false]) {
-    return new RegExp('^[^$_RTL_CHARS]*[$_LTR_CHARS]')
+    return RegExp('^[^$_RTL_CHARS]*[$_LTR_CHARS]')
         .hasMatch(isHtml ? stripHtmlIfNeeded(text) : text);
   }
 
   /// Determines if the first character in [text] with strong directionality is
   /// RTL. If [isHtml] is true, the text is HTML or HTML-escaped.
   static bool startsWithRtl(String text, [isHtml = false]) {
-    return new RegExp('^[^$_LTR_CHARS]*[$_RTL_CHARS]')
+    return RegExp('^[^$_LTR_CHARS]*[$_RTL_CHARS]')
         .hasMatch(isHtml ? stripHtmlIfNeeded(text) : text);
   }
 
@@ -107,7 +80,7 @@ class Bidi {
   /// character in [text] is LTR. If [isHtml] is true, the text is HTML or
   /// HTML-escaped.
   static bool endsWithLtr(String text, [isHtml = false]) {
-    return new RegExp('[$_LTR_CHARS][^$_RTL_CHARS]*\$')
+    return RegExp('[$_LTR_CHARS][^$_RTL_CHARS]*\$')
         .hasMatch(isHtml ? stripHtmlIfNeeded(text) : text);
   }
 
@@ -115,32 +88,32 @@ class Bidi {
   /// character in [text] is RTL. If [isHtml] is true, the text is HTML or
   /// HTML-escaped.
   static bool endsWithRtl(String text, [isHtml = false]) {
-    return new RegExp('[$_RTL_CHARS][^$_LTR_CHARS]*\$')
+    return RegExp('[$_RTL_CHARS][^$_LTR_CHARS]*\$')
         .hasMatch(isHtml ? stripHtmlIfNeeded(text) : text);
   }
 
   /// Determines if the given [text] has any LTR characters in it.
   /// If [isHtml] is true, the text is HTML or HTML-escaped.
   static bool hasAnyLtr(String text, [isHtml = false]) {
-    return new RegExp(r'[' '$_LTR_CHARS' r']')
+    return RegExp(r'[' '$_LTR_CHARS' r']')
         .hasMatch(isHtml ? stripHtmlIfNeeded(text) : text);
   }
 
   /// Determines if the given [text] has any RTL characters in it.
   /// If [isHtml] is true, the text is HTML or HTML-escaped.
   static bool hasAnyRtl(String text, [isHtml = false]) {
-    return new RegExp(r'[' '$_RTL_CHARS' r']')
+    return RegExp(r'[' '$_RTL_CHARS' r']')
         .hasMatch(isHtml ? stripHtmlIfNeeded(text) : text);
   }
 
-  static final _rtlLocaleRegex = new RegExp(
+  static final _rtlLocaleRegex = RegExp(
       r'^(ar|dv|he|iw|fa|nqo|ps|sd|ug|ur|yi|.*[-_]'
       r'(Arab|Hebr|Thaa|Nkoo|Tfng))(?!.*[-_](Latn|Cyrl)($|-|_))'
       r'($|-|_)',
       caseSensitive: false);
 
-  static String _lastLocaleCheckedForRtl;
-  static bool _lastRtlCheck;
+  static String? _lastLocaleCheckedForRtl;
+  static bool? _lastRtlCheck;
 
   /// Check if a BCP 47 / III [languageString] indicates an RTL language.
   ///
@@ -163,13 +136,13 @@ class Bidi {
   /// http://www.iana.org/assignments/language-subtag-registry, as well as
   /// Sindhi (sd) and Uyghur (ug).  The presence of other subtags of the
   /// language code, e.g. regions like EG (Egypt), is ignored.
-  static bool isRtlLanguage([String languageString]) {
-    var language = languageString ?? Intl.getCurrentLocale();
+  static bool isRtlLanguage([String? languageString]) {
+    var language = languageString ?? global_state.getCurrentLocale();
     if (_lastLocaleCheckedForRtl != language) {
       _lastLocaleCheckedForRtl = language;
       _lastRtlCheck = _rtlLocaleRegex.hasMatch(language);
     }
-    return _lastRtlCheck;
+    return _lastRtlCheck!;
   }
 
   /// Enforce the [html] snippet in RTL directionality regardless of overall
@@ -209,9 +182,9 @@ class Bidi {
   /// FF and IE).
   static String _enforceInHtmlHelper(String html, String direction) {
     if (html.startsWith('<')) {
-      StringBuffer buffer = new StringBuffer();
+      var buffer = StringBuffer();
       var startIndex = 0;
-      Match match = new RegExp('<\\w+').firstMatch(html);
+      var match = RegExp('<\\w+').firstMatch(html);
       if (match != null) {
         buffer
           ..write(html.substring(startIndex, match.end))
@@ -228,12 +201,12 @@ class Bidi {
   /// problem of messy bracket display that frequently happens in RTL layout.
   /// If [isRtlContext] is true, then we explicitly want to wrap in a span of
   /// RTL directionality, regardless of the estimated directionality.
-  static String guardBracketInHtml(String str, [bool isRtlContext]) {
+  static String guardBracketInHtml(String str, [bool? isRtlContext]) {
     var useRtl = isRtlContext == null ? hasAnyRtl(str) : isRtlContext;
-    RegExp matchingBrackets =
-        new RegExp(r'(\(.*?\)+)|(\[.*?\]+)|(\{.*?\}+)|(&lt;.*?(&gt;)+)');
+    var matchingBrackets =
+        RegExp(r'(\(.*?\)+)|(\[.*?\]+)|(\{.*?\}+)|(&lt;.*?(&gt;)+)');
     return _guardBracketHelper(str, matchingBrackets,
-        '<span dir=${useRtl? "rtl" : "ltr"}>', '</span>');
+        '<span dir=${useRtl ? "rtl" : "ltr"}>', '</span>');
   }
 
   /// Apply bracket guard to [str] using LRM and RLM. This is to address the
@@ -242,11 +215,11 @@ class Bidi {
   /// as good as guardBracketInHtml. If [isRtlContext] is true, then we
   /// explicitly want to wrap in a span of RTL directionality, regardless of the
   /// estimated directionality.
-  static String guardBracketInText(String str, [bool isRtlContext]) {
+  static String guardBracketInText(String str, [bool? isRtlContext]) {
     var useRtl = isRtlContext == null ? hasAnyRtl(str) : isRtlContext;
     var mark = useRtl ? RLM : LRM;
-    return _guardBracketHelper(str,
-        new RegExp(r'(\(.*?\)+)|(\[.*?\]+)|(\{.*?\}+)|(<.*?>+)'), mark, mark);
+    return _guardBracketHelper(
+        str, RegExp(r'(\(.*?\)+)|(\[.*?\]+)|(\{.*?\}+)|(<.*?>+)'), mark, mark);
   }
 
   /// (Mostly) reimplements the $& functionality of "replace" in JavaScript.
@@ -256,17 +229,17 @@ class Bidi {
   /// would return 'firehydrant!'.  // TODO(efortuna): Get rid of this once this
   /// is implemented in Dart.  // See Issue 2979.
   static String _guardBracketHelper(String str, RegExp regexp,
-      [String before, String after]) {
-    var buffer = new StringBuffer();
+      [String? before, String? after]) {
+    var buffer = StringBuffer();
     var startIndex = 0;
-    regexp.allMatches(str).forEach((match) {
+    for (var match in regexp.allMatches(str)) {
       buffer
         ..write(str.substring(startIndex, match.start))
         ..write(before)
         ..write(str.substring(match.start, match.end))
         ..write(after);
       startIndex = match.end;
-    });
+    }
     return (buffer..write(str.substring(startIndex))).toString();
   }
 
@@ -281,24 +254,24 @@ class Bidi {
   /// Otherwise, returns UNKNOWN, which is used to mean `neutral`.
   /// Numbers and URLs are counted as weakly LTR.
   static TextDirection estimateDirectionOfText(String text,
-      {bool isHtml: false}) {
+      {bool isHtml = false}) {
     text = isHtml ? stripHtmlIfNeeded(text) : text;
     var rtlCount = 0;
     var total = 0;
     var hasWeaklyLtr = false;
     // Split a string into 'words' for directionality estimation based on
     // relative word counts.
-    for (String token in text.split(new RegExp(r'\s+'))) {
+    for (var token in text.split(RegExp(r'\s+'))) {
       if (startsWithRtl(token)) {
         rtlCount++;
         total++;
-      } else if (new RegExp(r'^http://').hasMatch(token)) {
+      } else if (RegExp(r'^http://').hasMatch(token)) {
         // Checked if token looks like something that must always be LTR even in
         // RTL text, such as a URL.
         hasWeaklyLtr = true;
       } else if (hasAnyLtr(token)) {
         total++;
-      } else if (new RegExp(r'\d').hasMatch(token)) {
+      } else if (RegExp(r'\d').hasMatch(token)) {
         // Checked if token contains any numerals.
         hasWeaklyLtr = true;
       }
@@ -316,18 +289,18 @@ class Bidi {
   /// Replace the double and single quote directly after a Hebrew character in
   /// [str] with GERESH and GERSHAYIM. This is most likely the user's intention.
   static String normalizeHebrewQuote(String str) {
-    StringBuffer buf = new StringBuffer();
-    if (str.length > 0) {
+    var buf = StringBuffer();
+    if (str.isNotEmpty) {
       buf.write(str.substring(0, 1));
     }
     // Start at 1 because we're looking for the patterns [\u0591-\u05f2])" or
     // [\u0591-\u05f2]'.
-    for (int i = 1; i < str.length; i++) {
+    for (var i = 1; i < str.length; i++) {
       if (str.substring(i, i + 1) == '"' &&
-          new RegExp('[\u0591-\u05f2]').hasMatch(str.substring(i - 1, i))) {
+          RegExp('[\u0591-\u05f2]').hasMatch(str.substring(i - 1, i))) {
         buf.write('\u05f4');
       } else if (str.substring(i, i + 1) == "'" &&
-          new RegExp('[\u0591-\u05f2]').hasMatch(str.substring(i - 1, i))) {
+          RegExp('[\u0591-\u05f2]').hasMatch(str.substring(i - 1, i))) {
         buf.write('\u05f3');
       } else {
         buf.write(str.substring(i, i + 1));
@@ -339,6 +312,6 @@ class Bidi {
   /// Check the estimated directionality of [str], return true if the piece of
   /// text should be laid out in RTL direction. If [isHtml] is true, the string
   /// is HTML or HTML-escaped.
-  static bool detectRtlDirectionality(String str, {bool isHtml: false}) =>
+  static bool detectRtlDirectionality(String str, {bool isHtml = false}) =>
       estimateDirectionOfText(str, isHtml: isHtml) == TextDirection.RTL;
 }

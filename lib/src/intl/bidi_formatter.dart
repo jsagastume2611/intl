@@ -2,7 +2,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-part of intl;
+import 'dart:convert';
+
+import 'bidi.dart';
+import 'text_direction.dart';
+
+// Suppress naming issues as changing them would be breaking.
+// ignore_for_file: non_constant_identifier_names
 
 /// Bidi stands for Bi-directional text.  According to
 /// [Wikipedia](http://en.wikipedia.org/wiki/Bi-directional_text):
@@ -58,19 +64,19 @@ class BidiFormatter {
   TextDirection contextDirection;
 
   /// Indicates if we should always wrap the formatted text in a &lt;span&lt;,.
-  bool _alwaysSpan;
+  final bool _alwaysSpan;
 
   /// Create a formatting object with a direction. If [alwaysSpan] is true we
   /// should always use a `span` tag, even when the input directionality is
   /// neutral or matches the context, so that the DOM structure of the output
   /// does not depend on the combination of directionalities.
-  BidiFormatter.LTR([alwaysSpan = false])
+  BidiFormatter.LTR([bool alwaysSpan = false])
       : contextDirection = TextDirection.LTR,
         _alwaysSpan = alwaysSpan;
-  BidiFormatter.RTL([alwaysSpan = false])
+  BidiFormatter.RTL([bool alwaysSpan = false])
       : contextDirection = TextDirection.RTL,
         _alwaysSpan = alwaysSpan;
-  BidiFormatter.UNKNOWN([alwaysSpan = false])
+  BidiFormatter.UNKNOWN([bool alwaysSpan = false])
       : contextDirection = TextDirection.UNKNOWN,
         _alwaysSpan = alwaysSpan;
 
@@ -93,9 +99,9 @@ class BidiFormatter {
   /// a trailing unicode BiDi mark matching the context directionality is
   /// appended (LRM or RLM). If [isHtml] is false, we HTML-escape the [text].
   String wrapWithSpan(String text,
-      {bool isHtml: false, bool resetDir: true, TextDirection direction}) {
-    if (direction == null) direction = estimateDirection(text, isHtml: isHtml);
-    var result;
+      {bool isHtml = false, bool resetDir = true, TextDirection? direction}) {
+    direction ??= estimateDirection(text, isHtml: isHtml);
+    String result;
     if (!isHtml) text = const HtmlEscape().convert(text);
     var directionChange = contextDirection.isDirectionChange(direction);
     if (_alwaysSpan || directionChange) {
@@ -128,12 +134,12 @@ class BidiFormatter {
   /// [isHtml]. [isHtml] is used to designate if the text contains HTML (escaped
   /// or unescaped).
   String wrapWithUnicode(String text,
-      {bool isHtml: false, bool resetDir: true, TextDirection direction}) {
-    if (direction == null) direction = estimateDirection(text, isHtml: isHtml);
+      {bool isHtml = false, bool resetDir = true, TextDirection? direction}) {
+    direction ??= estimateDirection(text, isHtml: isHtml);
     var result = text;
     if (contextDirection.isDirectionChange(direction)) {
       var marker = direction == TextDirection.RTL ? Bidi.RLE : Bidi.LRE;
-      result = "${marker}$text${Bidi.PDF}";
+      result = '$marker$text${Bidi.PDF}';
     }
     return result + (resetDir ? _resetDir(text, direction, isHtml) : '');
   }
@@ -142,7 +148,7 @@ class BidiFormatter {
   /// general-purpose method (using relative word counts). A
   /// TextDirection.UNKNOWN return value indicates completely neutral input.
   /// [isHtml] is true if [text] HTML or HTML-escaped.
-  TextDirection estimateDirection(String text, {bool isHtml: false}) {
+  TextDirection estimateDirection(String text, {bool isHtml = false}) {
     return Bidi.estimateDirectionOfText(text, isHtml: isHtml); //TODO~!!!
   }
 
