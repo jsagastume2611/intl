@@ -4,26 +4,27 @@
 
 /// Test date formatting and parsing using custom locale data, which we get
 /// from the local copy.
-import 'package:intl/date_symbol_data_custom.dart';
-import 'package:intl/date_symbol_data_local.dart' as local_symbols;
-import 'package:intl/date_time_patterns.dart' as local_patterns;
 
+import 'dart:async';
 import 'date_time_format_test_stub.dart';
+import 'package:intl/date_symbol_data_local.dart' as localSymbols;
+import 'package:intl/date_time_patterns.dart' as localPatterns;
+import 'package:intl/date_symbol_data_custom.dart';
 
-void main() {
-  var symbols = local_symbols.dateTimeSymbolMap();
-  var patterns = local_patterns.dateTimePatternMap();
+main() {
+  var symbols = localSymbols.dateTimeSymbolMap();
+  var patterns = localPatterns.dateTimePatternMap();
   var locales = <String>[];
-  symbols.keys.take(10).forEach((locale) => locales.add(locale));
+  symbols.keys.take(10).forEach(locales.add);
   // Force inclusion of locales that are hard-coded in tests.
-  var requiredLocales = ['en_US', 'de', 'fr', 'ja', 'el', 'de_AT'];
+  var requiredLocales = ["en_US", "de", "fr", "ja", "el", "de_AT"];
   locales.addAll(requiredLocales);
   for (var locale in locales) {
-    print('initializing $locale');
+    print("initializing $locale");
     initializeDateFormattingCustom(
         locale: locale, symbols: symbols[locale], patterns: patterns[locale]);
   }
   runWith(() => locales, null, nullInitialization);
 }
 
-Future<void> nullInitialization(String a, String b) => Future.value();
+Future nullInitialization(String a, String b) => new Future.value(null);

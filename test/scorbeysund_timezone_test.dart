@@ -17,6 +17,6 @@
 import 'package:test/test.dart';
 import 'timezone_test_core.dart';
 
-void main() {
+main() {
   testTimezone('America/Scoresbysund', expectedUtcOffset: -1);
 }

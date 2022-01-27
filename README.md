@@ -1,4 +1,7 @@
-Provides internationalization and localization facilities,
+Intl
+====
+
+This package provides internationalization and localization facilities,
 including message translation, plurals and genders, date/number formatting
 and parsing, and bidirectional text.
 
@@ -16,17 +19,13 @@ Operations will use that locale unless told to do otherwise.
 
 You can explicitly set the global locale
 
-```dart
-Intl.defaultLocale = 'pt_BR';
-```
+      Intl.defaultLocale = 'pt_BR';
 
 or get it from the browser
 
-```dart
-import 'package:intl/intl_browser.dart';
-...
-findSystemLocale().then(runTheRestOfMyProgram);
-```
+      import "package:intl/intl_browser.dart";
+      ...
+      findSystemLocale().then(runTheRestOfMyProgram);
 
 To override the current locale for a particular operation, pass the operation
 to [withLocale][withLocale]. Note that this includes async tasks
@@ -37,17 +36,15 @@ is active. If you are using different locales within an application,
 the [withLocale][withLocale] operation may be preferable to setting
 [defaultLocale][defaultLocale].
 
-```dart
-Intl.withLocale('fr', () => print(myLocalizedMessage());
-```
+      Intl.withLocale('fr', () => print(myLocalizedMessage());
 
 To specify the locale for an operation you can create a format object in
 a specific locale, pass in the locale as a parameter to methods, or
 set the default locale.
 
 ```dart
-var format = DateFormat.yMd('ar');
-var dateString = format.format(DateTime.now());
+var format = new DateFormat.yMd("ar");
+var dateString = format.format(new DateTime.now());
 ```
 
 or
@@ -59,8 +56,8 @@ print(myMessage(dateString, locale: 'ar');
 or
 
 ```dart
-Intl.defaultLocale = 'es';
-DateFormat.jm().format(DateTime.now());
+Intl.defaultLocale = "es";
+new DateFormat.jm().format(new DateTime.now());
 ```
 
 ## Initialization
@@ -87,15 +84,13 @@ See "Extracting and Using Translated Messages"
 Messages to be localized are written as functions that return the result of
 an [Intl.message][Intl.message] call.
 
-```dart
-String continueMessage() => Intl.message(
-    'Hit any key to continue',
-    name: 'continueMessage',
-    args: [],
-    desc: 'Explains that we will not proceed further until '
-        'the user presses a key');
-print(continueMessage());
-```
+      String continueMessage() => Intl.message(
+          "Hit any key to continue",
+          name: "continueMessage",
+          args: [],
+          desc: "Explains that we will not proceed further until "
+              "the user presses a key");
+      print(continueMessage());
 
 This provides, in addition to the basic message string, a name, a description
 for translators, the arguments used in the message, and examples. The `name` and
@@ -122,67 +117,59 @@ are passing numbers or dates and you want them formatted, you must do
 the formatting outside the function and pass the formatted string into
 the message.
 
-```dart
-greetingMessage(name) => Intl.message(
-    'Hello $name!',
-    name: 'greetingMessage',
-    args: [name],
-    desc: 'Greet the user as they first open the application',
-    examples: const {'name': 'Emily'});
-print(greetingMessage('Dan'));
-```
+      greetingMessage(name) => Intl.message(
+          "Hello $name!",
+          name: "greetingMessage",
+          args: [name],
+          desc: "Greet the user as they first open the application",
+          examples: const {'name': "Emily"});
+      print(greetingMessage('Dan'));
 
 There is one special class of complex expressions allowed in the
 message string, for plurals and genders.
 
-```dart
-remainingEmailsMessage(int howMany, String userName) =>
-  Intl.message(
-    '''${Intl.plural(howMany,
-        zero: 'There are no emails left for $userName.',
-        one: 'There is $howMany email left for $userName.',
-        other: 'There are $howMany emails left for $userName.')}''',
-  name: 'remainingEmailsMessage',
-  args: [howMany, userName],
-  desc: How many emails remain after archiving.',
-  examples: const {'howMany': 42, 'userName': 'Fred'});
+      remainingEmailsMessage(int howMany, String userName) =>
+        Intl.message(
+          '''${Intl.plural(howMany,
+              zero: 'There are no emails left for $userName.',
+              one: 'There is $howMany email left for $userName.',
+              other: 'There are $howMany emails left for $userName.')}''',
+        name: "remainingEmailsMessage",
+        args: [howMany, userName],
+        desc: "How many emails remain after archiving.",
+        examples: const {'howMany': 42, 'userName': 'Fred'});
 
-print(remainingEmailsMessage(1, 'Fred'));
-```
+      print(remainingEmailsMessage(1, "Fred"));
 
 However, since the typical usage for a plural or gender is for it to
 be at the top-level, we can also omit the [Intl.message][Intl.message] call and
 provide its parameters to the [Intl.plural][Intl.plural] call instead.
 
-```dart
-remainingEmailsMessage(int howMany, String userName) =>
-  Intl.plural(
-    howMany,
-    zero: 'There are no emails left for $userName.',
-    one: 'There is $howMany email left for $userName.',
-    other: 'There are $howMany emails left for $userName.',
-    name: 'remainingEmailsMessage',
-    args: [howMany, userName],
-    desc: 'How many emails remain after archiving.',
-    examples: const {'howMany': 42, 'userName': 'Fred'});
-```
+      remainingEmailsMessage(int howMany, String userName) =>
+        Intl.plural(
+          howMany,
+          zero: 'There are no emails left for $userName.',
+          one: 'There is $howMany email left for $userName.',
+          other: 'There are $howMany emails left for $userName.',
+          name: "remainingEmailsMessage",
+          args: [howMany, userName],
+          desc: "How many emails remain after archiving.",
+          examples: const {'howMany': 42, 'userName': 'Fred'});
 
 Similarly, there is an [Intl.gender][Intl.gender] message, and plurals
 and genders can be nested.
 
-```dart
-notOnlineMessage(String userName, String userGender) =>
-  Intl.gender(
-    userGender,
-    male: '$userName is unavailable because he is not online.',
-    female: '$userName is unavailable because she is not online.',
-    other: '$userName is unavailable because they are not online',
-    name: 'notOnlineMessage',
-    args: [userName, userGender],
-    desc: 'The user is not available to hangout.',
-    examples: const {{'userGender': 'male', 'userName': 'Fred'},
-        {'userGender': 'female', 'userName' : 'Alice'}});
-```
+      notOnlineMessage(String userName, String userGender) =>
+        Intl.gender(
+          userGender,
+          male: '$userName is unavailable because he is not online.',
+          female: '$userName is unavailable because she is not online.',
+          other: '$userName is unavailable because they are not online',
+          name: "notOnlineMessage",
+          args: [userName, userGender],
+          desc: "The user is not available to hangout.",
+          examples: const {{'userGender': 'male', 'userName': 'Fred'},
+              {'userGender': 'female', 'userName' : 'Alice'}});
 
 It's recommended to use complete sentences in the sub-messages to keep
 the structure as simple as possible for the translators.
@@ -196,21 +183,21 @@ results need to be incorporated. The code for this is in the
 
 To extract messages, run the `extract_to_arb.dart` program.
 
-```console
-> pub run intl_translation:extract_to_arb --output-dir=target/directory
-    my_program.dart more_of_my_program.dart
-```
+      pub run intl_translation:extract_to_arb --output-dir=target/directory
+          my_program.dart more_of_my_program.dart
 
 This will produce a file `intl_messages.arb` with the messages from
-all of these programs. See [ARB][ARB].
+all of these programs. an [ARB][ARB]
+format file which can be used for input to translation tools like
+[Google Translator Toolkit][GoogleTranslateToolkit].
 The resulting translations can be used to generate a set of libraries
 using the `generate_from_arb.dart` program.
 
 This expects to receive a series of files, one per
 locale.
 
-```console
-> pub run intl_translation:generate_from_arb --generated_file_prefix=<prefix>
+```
+pub run intl_translation:generate_from_arb --generated_file_prefix=<prefix>
     <my_dart_files> <translated_ARB_files>
 ```
 
@@ -222,11 +209,9 @@ for a specific locale. Once that's done, any
 will automatically print the translated version instead of the
 original.
 
-```dart
-import 'my_prefix_messages_all.dart';
-...
-initializeMessages('dk').then(printSomeMessages);
-```
+      import "my_prefix_messages_all.dart";
+      ...
+      initializeMessages("dk").then(printSomeMessages);
 
 Once the future returned from the initialization call returns, the
 message data is available.
@@ -235,11 +220,9 @@ message data is available.
 
 To format a number, create a NumberFormat instance.
 
-```dart
-var f = NumberFormat('###.0#', 'en_US');
-print(f.format(12.345));
-  ==> 12.34
-```
+      var f = new NumberFormat("###.0#", "en_US");
+      print(f.format(12.345));
+        ==> 12.34
 
 The locale parameter is optional. If omitted, then it will use the
 current locale. The format string is as described in
@@ -249,9 +232,7 @@ It's also possible to access the number symbol data for the current
 locale, which provides information as to the various separator
 characters, patterns, and other information used for formatting, as
 
-```dart
-f.symbols
-```
+      f.symbols
 
 Current known limitations are that the currency format will only print
 the name of the currency, and does not support currency symbols, and
@@ -265,29 +246,23 @@ instance. These can be created using a set of commonly used skeletons
 taken from ICU/CLDR or using an explicit pattern. For details on the
 supported skeletons and patterns see [DateFormat][DateFormat].
 
-```dart
-DateFormat.yMMMMEEEEd().format(aDateTime);
-  ==> 'Wednesday, January 10, 2012'
-DateFormat('EEEEE', 'en_US').format(aDateTime);
-  ==> 'Wednesday'
-DateFormat('EEEEE', 'ln').format(aDateTime);
-  ==> 'mokɔlɔ mwa mísáto'
-```
+      new DateFormat.yMMMMEEEEd().format(aDateTime);
+        ==> 'Wednesday, January 10, 2012'
+      new DateFormat("EEEEE", "en_US").format(aDateTime);
+        ==> 'Wednesday'
+      new DateFormat("EEEEE", "ln").format(aDateTime);
+        ==> 'mokɔlɔ mwa mísáto'
 
 You can also parse dates using the same skeletons or patterns.
 
-```dart
-DateFormat.yMd('en_US').parse('1/10/2012');
-DateFormat('Hms', 'en_US').parse('14:23:01');
-```
+        new DateFormat.yMd("en_US").parse("1/10/2012");
+        new DateFormat("Hms", "en_US").parse('14:23:01');
 
 Skeletons can be combined, the main use being to print a full date and
 time, e.g.
 
-```dart
-DateFormat.yMEd().add_jms().format(DateTime.now());
-  ==> 'Thu, 5/23/2013 10:21:47 AM'
-```
+        new DateFormat.yMEd().add_jms().format(new DateTime.now());
+          ==> 'Thu, 5/23/2013 10:21:47 AM'
 
 Known limitations: Time zones are not yet supported. Dart
 [DateTime][DateTime] objects don't have a time zone, so are either
@@ -296,11 +271,9 @@ local or UTC. Formatting and parsing Durations is not yet implemented.
 Note that before doing any DateTime formatting for a particular
 locale, you must load the appropriate data by calling.
 
-```dart
-import 'package:intl/date_symbol_data_local.dart';
-...
-initializeDateFormatting('de_DE', null).then(formatDates);
-```
+        import 'package:intl/date_symbol_data_local.dart';
+        ...
+        initializeDateFormatting("de_DE", null).then(formatDates);
 
 Once the future returned from the initialization call returns, the
 formatting data is available.
@@ -320,23 +293,22 @@ direction. The direction can be specified with the
 [RTL][BidiFormatter.RTL] and [LTR][BidiFormatter.LTR] constructors, or
 detected from the text.
 
-```dart
-BidiFormatter.RTL().wrapWithUnicode('xyz');
-BidiFormatter.RTL().wrapWithSpan('xyz');
-```
+        new BidiFormatter.RTL().wrapWithUnicode('xyz');
+        new BidiFormatter.RTL().wrapWithSpan('xyz');
 
-[intl_lib]: https://pub.dev/documentation/intl/latest/intl/intl-library.html
-[Intl]: https://pub.dev/documentation/intl/latest/intl/Intl-class.html
-[DateFormat]: https://pub.dev/documentation/intl/latest/intl/DateFormat-class.html
-[NumberFormat]: https://pub.dev/documentation/intl/latest/intl/NumberFormat-class.html
-[withLocale]: https://pub.dev/documentation/intl/latest/intl/Intl/withLocale.html
-[defaultLocale]: https://pub.dev/documentation/intl/latest/intl/Intl/defaultLocale.html
-[Intl.message]: https://pub.dev/documentation/intl/latest/intl/Intl/message.html
-[Intl_translation]: https://pub.dev/packages/intl_translation
-[Intl.plural]: https://pub.dev/documentation/intl/latest/intl/Intl/plural.html
-[Intl.gender]: https://pub.dev/documentation/intl/latest/intl/Intl/gender.html
-[DateTime]: https://api.dart.dev/dart-core/DateTime-class.html
-[BidiFormatter]: https://pub.dev/documentation/intl/latest/intl/BidiFormatter-class.html
-[BidiFormatter.RTL]: https://pub.dev/documentation/intl/latest/intl/BidiFormatter/BidiFormatter.RTL.html
-[BidiFormatter.LTR]: https://pub.dev/documentation/intl/latest/intl/BidiFormatter/BidiFormatter.LTR.html
-[ARB]: https://github.com/google/app-resource-bundle
+[intl_lib]: https://www.dartdocs.org/documentation/intl/latest/intl/intl-library.html
+[Intl]: https://www.dartdocs.org/documentation/intl/latest
+[DateFormat]: https://www.dartdocs.org/documentation/intl/latest/intl/DateFormat-class.html
+[NumberFormat]: https://www.dartdocs.org/documentation/intl/latest/intl/NumberFormat-class.html
+[withLocale]: https://www.dartdocs.org/documentation/intl/latest/intl/Intl/withLocale.html
+[defaultLocale]: https://www.dartdocs.org/documentation/intl/latest/intl/Intl/defaultLocale.html
+[Intl.message]: https://www.dartdocs.org/documentation/intl/latest/intl/Intl/message.html
+[Intl_translation]: https://www.dartdocs.org/documentation/intl_translation/latest
+[Intl.plural]: https://www.dartdocs.org/documentation/intl/latest/intl/Intl/plural.html
+[Intl.gender]: https://www.dartdocs.org/documentation/intl/latest/intl/Intl/gender.html
+[DateTime]: https://api.dartlang.org/stable/dart-core/DateTime-class.html
+[BidiFormatter]: https://www.dartdocs.org/documentation/intl/latest/intl/BidiFormatter-class.html
+[BidiFormatter.RTL]: https://www.dartdocs.org/documentation/intl/latest/intl/BidiFormatter/BidiFormatter.RTL.html
+[BidiFormatter.LTR]: https://www.dartdocs.org/documentation/intl/latest/intl/BidiFormatter/BidiFormatter.LTR.html
+[ARB]: https://code.google.com/p/arb/wiki/ApplicationResourceBundleSpecification
+[GoogleTranslateToolkit]: https://translate.google.com/toolkit/

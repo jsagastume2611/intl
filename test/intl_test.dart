@@ -4,13 +4,13 @@
 
 library intl_test;
 
-import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:test/test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
+main() {
   test("Locale setting doesn't verify the core locale", () {
-    var de = Intl('de_DE');
+    var de = new Intl('de_DE');
     expect(de.locale, equals('de_DE'));
   });
 
@@ -20,13 +20,13 @@ void main() {
     // locales covered for messages may be different from that for date
     // formatting.
     initializeDateFormatting('de_DE', null).then((_) {
-      var de = Intl('de_DE');
+      var de = new Intl('de_DE');
       var format = de.date().add_d();
       expect(format.locale, equals('de'));
     });
   });
 
-  test('Canonicalizing locales', () {
+  test("Canonicalizing locales", () {
     expect(Intl.canonicalizedLocale('en-us'), 'en_US');
     expect(Intl.canonicalizedLocale('en_us'), 'en_US');
     expect(Intl.canonicalizedLocale('en_US'), 'en_US');
@@ -35,7 +35,7 @@ void main() {
     expect(Intl.canonicalizedLocale('C'), 'en_ISO');
   });
 
-  test('Verifying locale fallback for numbers', () {
+  test("Verifying locale fallback for numbers", () {
     expect(Intl.verifiedLocale('en-us', NumberFormat.localeExists), 'en_US');
     expect(Intl.verifiedLocale('en_us', NumberFormat.localeExists), 'en_US');
     expect(Intl.verifiedLocale('es-419', NumberFormat.localeExists), 'es_419');
@@ -45,7 +45,7 @@ void main() {
     void checkAsNumberDefault(String locale, String expected) {
       var oldDefault = Intl.defaultLocale;
       Intl.defaultLocale = locale;
-      var format = NumberFormat();
+      var format = new NumberFormat();
       expect(format.locale, expected);
       Intl.defaultLocale = oldDefault;
     }
@@ -57,7 +57,7 @@ void main() {
     checkAsNumberDefault('es-999', 'es');
   });
 
-  test('Verifying locale fallback for dates', () {
+  test("Verifying locale fallback for dates", () {
     expect(Intl.verifiedLocale('en-us', DateFormat.localeExists), 'en_US');
     expect(Intl.verifiedLocale('en_us', DateFormat.localeExists), 'en_US');
     expect(Intl.verifiedLocale('es-419', DateFormat.localeExists), 'es_419');
@@ -67,7 +67,7 @@ void main() {
     void checkAsDateDefault(String locale, String expected) {
       var oldDefault = Intl.defaultLocale;
       Intl.defaultLocale = locale;
-      var format = DateFormat();
+      var format = new DateFormat();
       expect(format.locale, expected);
       Intl.defaultLocale = oldDefault;
     }
@@ -79,16 +79,16 @@ void main() {
     checkAsDateDefault('es-999', 'es');
   });
 
-  test('toBeginningOfSentenceCase', () {
+  test("toBeginningOfSentenceCase", () {
     expect(toBeginningOfSentenceCase(null), null);
-    expect(toBeginningOfSentenceCase(''), '');
-    expect(toBeginningOfSentenceCase('A'), 'A');
-    expect(toBeginningOfSentenceCase('a'), 'A');
-    expect(toBeginningOfSentenceCase('abc'), 'Abc');
-    expect(toBeginningOfSentenceCase('[a]'), '[a]');
-    expect(toBeginningOfSentenceCase('ABc'), 'ABc');
-    expect(toBeginningOfSentenceCase('ı'), 'I');
-    expect(toBeginningOfSentenceCase('i'), 'I');
-    expect(toBeginningOfSentenceCase('i', 'tr'), '\u0130');
+    expect(toBeginningOfSentenceCase(""), "");
+    expect(toBeginningOfSentenceCase("A"), "A");
+    expect(toBeginningOfSentenceCase("a"), "A");
+    expect(toBeginningOfSentenceCase("abc"), "Abc");
+    expect(toBeginningOfSentenceCase("[a]"), "[a]");
+    expect(toBeginningOfSentenceCase("ABc"), "ABc");
+    expect(toBeginningOfSentenceCase("ı"), "I");
+    expect(toBeginningOfSentenceCase("i"), "I");
+    expect(toBeginningOfSentenceCase("i", "tr"), "\u0130");
   });
 }

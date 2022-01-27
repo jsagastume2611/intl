@@ -14,6 +14,6 @@
 import 'package:test/test.dart';
 import 'timezone_test_core.dart';
 
-void main() {
+main() {
   testTimezone('UTC', expectedUtcOffset: 0);
 }

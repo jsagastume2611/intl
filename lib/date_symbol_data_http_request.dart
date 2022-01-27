@@ -6,6 +6,8 @@
 /// locale data via http requests to a web server..
 library date_symbol_data_http_request;
 
+import 'dart:async';
+
 import 'date_symbols.dart';
 import 'intl.dart';
 import 'src/data/dates/locale_list.dart';
@@ -19,17 +21,17 @@ export 'src/data/dates/locale_list.dart';
 /// methods are called. It sets up the lookup for date symbols using [url].
 /// The [url] parameter should end with a "/". For example,
 ///   "http://localhost:8000/dates/"
-Future<void> initializeDateFormatting(String locale, String url) {
-  var reader = HttpRequestDataReader('${url}symbols/');
-  initializeDateSymbols(() => LazyLocaleData(
+Future initializeDateFormatting(String locale, String url) {
+  var reader = new HttpRequestDataReader('${url}symbols/');
+  initializeDateSymbols(() => new LazyLocaleData(
       reader, _createDateSymbol, availableLocalesForDateFormatting));
-  var reader2 = HttpRequestDataReader('${url}patterns/');
+  var reader2 = new HttpRequestDataReader('${url}patterns/');
   initializeDatePatterns(() =>
-      LazyLocaleData(reader2, (x) => x, availableLocalesForDateFormatting));
-  var actualLocale =
-      Intl.verifiedLocale(locale, availableLocalesForDateFormatting.contains);
+      new LazyLocaleData(reader2, (x) => x, availableLocalesForDateFormatting));
+  var actualLocale = Intl.verifiedLocale(
+      locale, (l) => availableLocalesForDateFormatting.contains(l));
   return initializeIndividualLocaleDateFormatting((symbols, patterns) {
-    return Future.wait(<Future<List<dynamic>>>[
+    return Future.wait(<Future>[
       symbols.initLocale(actualLocale),
       patterns.initLocale(actualLocale)
     ]);
@@ -37,5 +39,5 @@ Future<void> initializeDateFormatting(String locale, String url) {
 }
 
 /// Defines how new date symbol entries are created.
-DateSymbols _createDateSymbol(Map<dynamic, dynamic> map) =>
-    DateSymbols.deserializeFromMap(map);
+DateSymbols _createDateSymbol(Map map) =>
+    new DateSymbols.deserializeFromMap(map);

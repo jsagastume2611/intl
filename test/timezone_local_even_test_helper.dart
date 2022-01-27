@@ -9,20 +9,19 @@
 
 import 'dart:io';
 
+import 'date_time_format_test_stub.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:test/test.dart';
 
-import 'date_time_format_test_stub.dart';
-
-void main() {
+main() {
   var tzOffset = Platform.environment['EXPECTED_TZ_OFFSET_FOR_TEST'];
   var timezoneName = Platform.environment['TZ'];
   if (tzOffset != null) {
-    test('Actually running in the correct time zone: $timezoneName', () {
+    test("Actually running in the correct time zone: $timezoneName", () {
       // Pick a constant Date so that the offset is known.
-      var d = DateTime(2012, 1, 1, 7, 6, 5);
-      print('Time zone offset is ${d.timeZoneOffset.inHours}');
-      print('Time zone name is ${d.timeZoneName}');
+      var d = new DateTime(2012, 1, 1, 7, 6, 5);
+      print("Time zone offset is ${d.timeZoneOffset.inHours}");
+      print("Time zone name is ${d.timeZoneName}");
       expect(tzOffset, '${d.timeZoneOffset.inHours}');
     });
   }
